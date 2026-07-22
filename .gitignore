@@ -1,0 +1,63 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# Local/editor metadata
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+Desktop.ini
+
+# Logs and transient generated files
+*.log
+*.tmp
+*.temp
+*.bak
+
+# Archives and large reference artifacts
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.pdf
+
+# Rendered/generated outputs: keep lightweight reports only
+outputs/*
+!outputs/reports/
+!outputs/reports/**/*.md
+!outputs/reports/**/*.txt
+!outputs/reports/**/*.csv
+!outputs/reports/**/*.json
+
+# Generated image artifacts
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+
+# Common FPGA/EDA build artifacts
+*.jou
+*.str
+*.wdb
+*.vcd
+*.fst
+*.bit
+*.bin
+*.rpt
+*.dcp
+*.xdc.bak
+.Xil/
+*.cache/
+*.runs/
+*.sim/
+*.hw/
+*.ip_user_files/

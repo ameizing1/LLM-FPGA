@@ -1,0 +1,467 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\An Efficient Softcore Multiplier Architecture for Xilinx FPGAs - ARITH15.pdf
+PAGES: 8
+--- PAGE 1 ---
+An Efﬁcient Softcore Multiplier Architecture for Xilinx FPGAs
+Martin Kumm, Shahid Abbas and Peter Zipf
+University of Kassel, Germany
+Digital Technology Group
+Email: kumm@uni-kassel.de, shahid.abbas@student.uni-kassel.de, zipf@uni-kassel.de
+Abstract
+This work presents an efﬁcient implementation of
+a softcore multiplier , i. e., a multiplier architecture
+which can be efﬁciently mapped to the slice resources
+of modern Xilinx FPGAs. Instead of dividing the
+multiplication into the generation of partial products
+and the summation using a compressor tree, as done
+in modern multipliers, an array-like architecture is
+proposed. Each row of the array generates a partial
+product which is directly added to results of previous
+rows using the fast carry chain. A radix-4 Booth
+encoding/decoding is used to reduce the I/O count of
+the partial product generation which makes it possible
+to map both, the Booth encoder and decoder , into a
+single 6-input look up table (LUT). Like a conventional
+Booth multiplier , this nearly halves the number of
+rows compared to a ripple carry array multiplier . In
+addition, the compressor tree is completely avoided
+and an efﬁcient and regular structure retains that uses
+up to 50 % less slice resources compared to previous
+approaches and offers a multiply accumulate (MAC)
+operation without extra resources.
+1. Introduction
+Efﬁcient multipliers are a key element for many
+applications in the domain of digital signal process-
+ing, image processing, scientiﬁc computing and many
+more. This demand on multipliers and their large
+complexity when mapped to the logic of ﬁeld pro-
+grammable gate arrays (FPGAs) forced the vendors to
+embed hard multiplier blocks and DSP blocks (which
+include pre and post addition) into the fabric of mod-
+ern FPGAs. However, there are two main limitations
+when using embedded multipliers or DSP blocks: First,
+only a limited number is available and second, their
+word size is restricted. Furthermore, they have ﬁxed
+locations and are often asymmetric in word size (like
+the 18× 24 multiplier in Xilinx FPGAs). The limited
+word size can be extended by using several smaller
+multipliers and additional adders. A method called
+tiling was proposed to construct large multiplications
+using several DSP blocks and softcore multipliers in
+an efﬁcient way [1], [2]. Here, the softcore multipliers
+are needed to “ﬁll gaps” where a DSP block is too
+large. Besides the large multipliers, many applications
+require only small word size multipliers, like, e. g.,
+image and video processing applications, where typical
+word sizes are 8 to 10 bit. Here, large parts of the
+DSP block are wasted. As a consequence, there is a
+demand for softcore multipliers whenever DSP blocks
+are not sufﬁcient or their word size does not match to
+the requirements.
+While a rich body of literature exists for parallel
+multipliers in application speciﬁc integrated circuits
+(ASICs), there is only few dealing with softcore mul-
+tipliers on FPGAs. Kumar et al. presented a softcore
+multiplier structure which is based on a Booth mul-
+tiplier [3] where the partial products are obtained
+from Booth recoding of one multiplicand and the
+compressor tree is replaced by a ripple-carry adder
+tree to beneﬁt from the fast carry chain of the FPGA
+[4]. While this is suitable for the 4-input LUTs of old
+FPGAs, much more is possible on modern FPGAs.
+A softcore multiplier architecture that exploits the
+low-level properties of modern FPGAs was presented
+by Parandeh-Afshar et al. [5]. They showed that two
+partial products of a Baugh-Wooley multiplier [6] can
+be generated and already compressed in a single stage
+of logic by using the two outputs of a look up table
+(LUT) and the fast carry chain. The number of remain-
+ing partial products is nearly halved like for the Booth
+multiplier which avoids the Booth decoding/encoding
+logic. However, a compressor tree is still required to
+obtain the ﬁnal product. This architecture is reviewed
+in Section 2.1.
+Another totally different concept is to compose a
+multiplier out of several smaller multipliers and ad-
+ditions. The idea of using small multipliers which ﬁt
+2015 IEEE 22nd Symposium on Computer Arithmetic
+1063-6889/15 $31.00 © 2015 IEEE
+DOI 10.1109/ARITH.2015.17
+18
+
+
+--- PAGE 2 ---
+Table 1: 4× 4 bit multiplication scheme
+a3b0 a2b0 a1b0 a0b0
++ a3b1 a2b1 a1b1 a0b1
++ a3b2 a2b2 a1b2 a0b2
++ a3b3 a2b3 a1b3 a0b3
+= p7 p6 p5 p4 p3 p2 p1 p0
+into few FPGA LUTs was mentioned but not further
+investigated by de Dinechin et al. [7]. They proposed
+to map a 3 ×3 multiplier in six 6-input LUTs which
+work in parallel, leading to a delay of a single LUT.
+These partial results have to be bit-shifted and added
+which can be done using a compressor tree.
+The compressor tree is a crucial part in multipliers.
+While it was believed for a long time that ripple
+carry adders are the best choice to realize a multi-
+input addition on FPGAs, it was demonstrated in the
+last years that the usage of compressor trees with
+generalized parallel counters (GPCs) as replacement of
+full-adders can improve this. While in early work, the
+delay could be reduced by compressor trees [8]–[11], it
+was shown recently that also the resources can be saved
+by exploiting the low level structure of FPGAs [12],
+[13]. However, the compressor tree typically occupies
+a signiﬁcant part of the total resources of the multiplier.
+In this work, an optimized softcore multiplier ar-
+chitecture is presented which completely avoids the
+compressor tree. This is done by merging the Booth
+recoding scheme of a Booth multiplier with the (ripple-
+carry) summation of the partial products in a single
+stage of LUTs, fast carry chains and (optionally) ﬂip
+ﬂops (FFs). The result is a regular array-like structure
+which is also capable to perform a multiply accumulate
+(MAC) operation. Besides the combinatorial imple-
+mentation, a pipeline extension of the architecture is
+discussed which can be obtained by a few additional
+slice resources for FFs. Results are obtained from
+several synthesis experiments which are compared with
+Xilinx Coregen [14], the Parandeh-Afshar multiplier,
+which was ported to the Virtex 6 FPGA [5], and several
+variants of the idea presented in [7].
+2. Review of FPGA Multiplier Architec-
+tures
+In the following, previous multiplier architectures
+are reviewed. The presentation is done for unsigned
+numbers for the sake of simplicity. The extension to
+signed numbers is straight forward and is indicated
+where needed for the proposed multiplier.
+0
+1
+0
+1
+0
+1
+Carry
+Logic
+0
+1
+LUTLUTLUTLUT
+Figure 1: Slice conﬁguration for the Parandeh-Afshar
+multiplier
+2.1. Baugh-Wooley Multiplier
+An N × M bit multiplication of two unsigned
+binary numbers a =( aN −1 ...a 1a0) and b =
+(bM −1 ...b 1b0), with ai,b i ∈{ 0, 1} can be written
+as
+p = a· b = a·
+( M −1∑
+m=0
+2mbm
+)
+=
+M −1∑
+m=0
+2m a· bm
+partial product
+.
+(1)
+Hence, the partial products a· bm can be obtained by a
+bitwise AND-operation which are then bit-shifted and
+added to get the ﬁnal product. Take, e. g., a 4× 4 bit
+multiplication, the product p is obtained by summing
+four partial products as shown in Table 1.
+The probably most straight forward way to do this is
+realized with the ripple-carry array (RCA) multiplier.
+Its modiﬁcation for two’s complement inputs is better
+known as the Baugh-Wooley multiplier [6]. Here, a
+basic cell which includes an AND gate and a full adder
+(FA) is organized in a regular array where each row
+corresponds to a ripple carry adder (RCA) which adds
+the partial product of the current row ( m in (1)) with
+the preceding results, yielding the product in the last
+stage.
+The idea of Parandeh-Afshar et al. was to map two
+AND gates into the two-output LUT of the adaptive
+logic modules (ALMs) of modern Altera Stratix FP-
+GAs (beginning from Stratix-II) and to use the full
+adders to add the partial results [5]. This structure can
+be directly transferred to the Xilinx FPGA slice which
+consists of four LUTs, fast carry chain logic and up to
+eight FFs. A slice mapping is illustrated in Figure 1
+for the ﬁrst two rows and the four least signiﬁcant
+bit (LSB) columns of the example in Table 1. Here,
+the two AND gates are used to generate the partial
+products while the exclusive-or (XOR) gate in the
+LUT, together with the XOR gate and the multiplexer
+(MUX) in the carry logic form a full adder. With this
+19
+
+--- PAGE 3 ---
+Figure 2: Tiling of a 8 × 8 multiplier using smaller
+multipliers
+conﬁguration, two partial products can be added which
+halves the number of partial products (for even word
+sizes). The sum of all partial products is computed by
+using their compressor tree method [8]. Note that the
+LSB positions of each partial product can be computed
+with a single AND gate which slightly reduces the
+carry-chain delay.
+2.2. LUT-Multiplier-based Architecture
+The idea of realizing an FPGA speciﬁc softcore
+multiplier based on partial results of several 3 × 3
+multipliers which were mapped to the FPGA LUTs
+was proposed recently [7]. A 3× 3 multiplier has six
+output bits and can be directly mapped to six 6-input
+LUTs by tabulating the multiplication result for each
+output bit. To build a larger multiplier the partial results
+from these basic multipliers have to be shifted and
+added. A simple graphical way to compute these shifts
+was introduced with the tiling method [1], [2]. Here, an
+N× M multiplication is visualized with a rectangle of
+size N×M . Then, this rectangle is “tiled” with smaller
+multipliers until the complete rectangle is ﬁlled. The
+input bits of the small multipliers as well as the output
+shifts can be directly obtained from the rectangle. Take
+for example an 8 × 8 multiplier wich is represented
+by the rectangle in Figure 2. It can be covered by
+four 3 × 3 multipliers (M1, M2, M4 and M5), four
+2× 3 multipliers (M3, M6, M7 and M8) and one 2× 2
+multipler (M9). The 2×3 and 2×2 multipliers use less
+LUTs due to the reduced output word size of 5 and 4,
+respectively. Now, the inputs of a multiplier correspond
+to the coordinate ranges in a and b directions. The
+inputs of multiplier M6 for example are a3...5 and
+b6...7. The necessary shift of the multiplier result is
+equal to the sum of a and b coordinates of the upper
+right corner of the small multiplier. Multiplier M6 has
+to be shifted by 3+6 = 9 bit as its upper right corner
+coordinate is a =3 and b =6 . The complete product
+of the 8× 8 multiplier example is
+p =M 1+2 3M 2+2 6M 3+ ... (2)
+... +2 3M 4+2 6M 5+2 9M 6+ ... (3)
+... +2 6M 7+2 9M 8+2 12M 9 (4)
+where Mi corresponds to the result of multiplier i.
+Besides the 3 × 3 basic multiplier, there are other
+possible conﬁgurations which might be interesting.
+On modern Xilinx FPGAs, the 6-input LUT can be
+conﬁgured as two 5-input LUTs with shared inputs.
+This allows to build a 3× 2 multiplier with only ﬁve
+5-input LUTs which are mapped to three 6-input LUTs
+(one 5-input LUT remains unused). Another way is to
+realize a 1×4 multiplier with four 5-input LUTs which
+are mapped to two 6-input LUTs. While these different
+basic multipliers use the LUT resources in a more efﬁ-
+cient way, the number of partial products is increased
+signiﬁcantly which increases the compressor tree. The
+three basic multipliers are evaluated experimentally in
+Section 4.
+3. Proposed Architecture
+Before the proposed multiplier is presented, some
+common concepts used in Booth multipliers are dis-
+cussed.
+3.1. Booth Multiplier
+A well known multiplier and probably the most used
+multiplier in the ASIC domain is the Booth multiplier
+[3]. The main idea is to recode one of the inputs as
+follows:
+b =bM −12M −1 + ... + b222 + b121 + b0
+=bM −12M −1 + ... + b222 +2 b121 + −b121 + b0  
+BE0 =−2b1 +b0
+=bM −12M −1 + ...
+... +2 b323 −b323 + b222 +2 b121
+  
+BE2 =(−2b3 +b2 +b1 )22
++BE0
+=
+M∑
+m=0
+m even
+BEm2m with BE m = −2bm+1 + bm + bm−1
+(5)
+The multiplication becomes
+a· b =
+M∑
+m=0
+m even
+a· BEm2m . (6)
+The values of the Booth encoder terms BE m are in
+the range of −2 ... 2 as listed in Table 2. Hence, the
+20
+
+--- PAGE 4 ---
+Table 2: Truth table of a Booth encoder
+bm+1 bm bm−1 BEm zm cm sm
+000 0 100
+001 1 000
+010 1 000
+011 2 001
+100 -2 011
+101 -1 010
+110 -1 010
+111 0 100
+c6
+c6 c4
+c4c4c4 c2
+c2c2c2c2c2 c0
+c0c0c0c0c0c0c0
+0
+0
+0LSB
+MSB
+b
++
+=
+(a) Naive sign extension
+c6
+c6 c4
+c41 c2
+c21 c0
+c0
+11
+0
+0
+0LSB
+MSB
+b
++
+=
+(b) Optimized sign extension
+Figure 3: Sign extension in Booth multipliers [15]
+partial products a·BEm can be obtained by shifting a if
+|BEm| =2 (encoded by sm =1 ), complementing the
+result if BE m < 0 (encoded by cm =1 ) or setting the
+partial product to zero in case that BE m =0 (encoded
+by zm =1 ). This nearly halves the number of partial
+products and, thus, reduces the size of the compressor
+tree which typically follows.
+Due to this coding, the partial products may become
+negative which requires a sign extension. The sign bit
+of each partial product is identical to the complement
+bit cm according to Table 2. If the complement bit
+is set, the partial product has to be inverted and a ‘1’
+must be added to the LSB position. The naive approach
+is illustrated in the dot diagram in Figure 3(a). Here,
+each row of dots represents a partial product which
+is already inverted when the corresponding cm is set.
+The conditional increment is done by adding the cm
+0
+1
+0
+1
+Carry
+Logic
+0
+1
+0
+0 1
+0 1
+0 1
+LUTLUTLUT
+0
+0 1
+0 1
+0 1
+LUT
+0
+1
+Figure 4: Slice conﬁguration of the proposed multiplier
+bit to the LSB position. The sign extension is done by
+padding cm bits up to the MSB position of the product.
+A well known technique to reduce the number of bits
+for sign extension is to replace a bit vector of identical
+bits by a vector of ones plus the inverted bit at LSB
+position:
+1111 ... 1111
++ ... x
+= x xxxx ... xxxx
+The MSB bit of the result x has to be ignored.
+Applying this transformation to the dot diagram in
+Figure 3(a) results in several overlapping rows of
+constant ‘1’ bits which can be added in advance,
+resulting in the dot diagram shown in Figure 3(b).
+This representation is typically used as input of a
+compressor tree that reduces the partial products to the
+ﬁnal product. In the proposed architecture, each partial
+product row is generated in a chain of FPGA slices
+and previous intermediate results are directly added
+to the current partial product. This is detailed in the
+following.
+3.2. Proposed FPGA Mapping
+Each partial product row is mapped to a slice conﬁg-
+uration as shown in Figure 4, the complete multiplier
+array is given in Figure 5. We distinguish between
+the three different LUT conﬁgurations A⃝, B⃝ and C⃝.
+Except the two LUTs at the MSB positions n = N +2
+and n = N +1 (leftmost LUTs in Figure 4), where n is
+the column index of the corresponding row, all LUTs
+are of conﬁguration A⃝. The rightmost LUT in Figure 4
+has the only task to add cm to the LSB position. This
+is due to a limitation that the carry-in of a slice can
+only be set to constant ‘0’ or constant ‘1’ when the
+zero-input of the carry chain MUX bypasses the LUT.
+Using the shown input conﬁguration, the rightmost
+LUT simply computes zcm which is passed over the
+21
+
+--- PAGE 5 ---
+Figure 5: Overall architecture of the proposed multiplier with 8 ×8 bit unsigned inputs
+carry chain MUX to the carry-in of the next higher bit
+position.
+The following N +1 LUTs (represented by the
+2nd right LUT in Figure 4) realize the partial product
+generation and addition (the dots in Figure 3). As a
+Booth encoder has three inputs and three outputs, it
+can be replicated in each LUT A⃝ without cost, saving
+an extra (high fanout) Booth encoder for each partial
+product. The bit shift, complement and zero setting
+(i. e., the Booth decoder) are performed in the same
+LUT which is represented by three multiplexers in
+Figure 4. The ﬁrst MUX realizes the shift by selecting
+between an and an−1 (a−1 is deﬁned to be zero). The
+next MUX performs the conditional inversion in case
+of a complement and the last MUX sets the partial
+product to zero in case of z =1 . The input tr
+n denotes
+a result of a previous row (or the accumulate input d),
+where r = m/2 is the index of the row. This input is
+added to the partial product which leads to the result
+of the next row shifted by two bits tr+1
+n−2. With this
+conﬁguration, the complete LUT is utilized with all
+inputs to compute the Booth encoding, the decoding
+as well as an 1-bit addition which is the key for an
+efﬁcient FPGA implementation.
+Each row is completed by two LUTs with conﬁg-
+uration B⃝ and C⃝ for the sign extension. LUT B⃝ is
+used to add cm while LUT C⃝ adds the constant ‘1’
+according to Figure 3(b). In the ﬁrst row, the input
+t0
+N +1 is used to add the additional ‘1’.
+Several such rows are cascaded to build the full
+multiplier as shown for an 8× 8 multiplier in Figure 5.
+Each square represents a LUT and one bit of carry
+chain processing. The slices are indicated with thick
+lines. It can be seen that the structure is very regular
+and has a rectangular shape (which is drawn as a
+parallelogram in Figure 5 only for clarity). Note that
+some LUTs at MSB side can be removed as their result
+can be ignored. Modiﬁcations for signed input numbers
+are straight forward and identical to the modiﬁcations
+that are necessary in common Booth multipliers [15].
+The number of required slices can be exactly pre-
+dicted without synthesis. It is equal to the number of
+slices per row times the number of rows. Four columns
+can be mapped to the four LUTs of a slice leading to
+#slices(M, N )= ⌈N/4+1 ⌉  
+slices per row
+·⌊M/2+1 ⌋  
+no of rows
+. (7)
+Of course, if N (the word size of a) is not divisible by
+four, some LUTs of the MSB slices may be available
+for other logic. Note that for N ̸= M , it might be
+better to swap the operands. For example, with N =9
+and M =8 , the multiplier requires 20 slices while for
+22

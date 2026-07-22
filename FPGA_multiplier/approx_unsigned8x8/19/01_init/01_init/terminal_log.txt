@@ -1,0 +1,41 @@
+Log file: /home/xuanqi/tony/work/FPGA/approx_mlp/approx_88_mlp/4/19/01_init/01_init/terminal_log.txt
+Stage: 01_init_from_6x6_best_approx62_cascade
+Args: {'stage_name': '01_init_from_6x6_best_approx62_cascade', 'init_mode': 'json', 'base_inits_json': '/home/xuanqi/tony/work/FPGA/approx_mlp/approx_88_mlp/4/19/01_init/input_low66_best.json', 'cross_init_mode': 'approx62', 'seed': 500, 'mred_denom': 'total', 'eval_only': True, 'random_prob': 0.5, 'train_scope': 'cross_top', 'epochs': 0, 'lr': 0.001, 'init_p': 0.95, 'noise_std': 0.01, 'c_init': 2.0, 'c_out': 2.0, 'c_anneal': False, 'zero_weight': 0.01, 'med_weight': 0.0, 'bin_weight': 1e-05, 'grad_clip': 1.0, 'restart_from_best_every': 0, 'restart_init_p': 0.96, 'restart_noise_std': 0.005, 'restart_lr_decay': 0.8, 'min_lr': 1e-05, 'max_wce': -1, 'max_er': -1.0, 'max_med': -1.0, 'single_after': False, 'single_only': False, 'single_rounds': 20, 'single_mode': 'best', 'single_lut_names': 'all', 'single_random_order': False, 'pair_after': False, 'pair_only': False, 'pair_rounds': 4, 'pair_mode': 'first', 'pair_lut_names': 'cross', 'pair_random_order': False, 'pair_max_pairs': 80000, 'escape_only': False, 'topk': 120, 'candidate_mode': 'top_neutral', 'neutral_top': 180, 'neutral_margin': 0.004, 'escape_iters': 120, 'kmin': 1, 'kmax': 5, 'escape_single_rounds': 8, 'escape_pair_after': False, 'escape_pair_rounds': 2, 'escape_pair_max_pairs': 50000, 'do_single': False, 'do_pair': False, 'do_escape': False, 'do_final_single': False, 'out_dir': '/home/xuanqi/tony/work/FPGA/approx_mlp/approx_88_mlp/4/19/01_init/01_init', 'log_file': 'terminal_log.txt'}
+Projected-accurate approx62 INIT: {'lut1': "64'h6AC00000A0A00000", 'lut2': "64'hE6AA4C80EAC0EAC0", 'lut3': "64'hE62A4C80EA40EA40", 'lut4': "64'h800000004C800000"}
+Base metrics: MRED=0.0295301296 MED=277.0695 ER=0.7680 WCE=4034 err=50333/65536 mred_denom=total
+  low_lut1   = 64'hEAC0F245A0A0BDBD
+  low_lut2   = 64'hEEAACC00EAC0EAC0
+  low_lut3   = 64'hCCAACC0040C0EAC0
+  low_lut4   = 64'h9C006F18730006DE
+  mid_lut1   = 64'hA0A0F245EAC0BDBD
+  mid_lut2   = 64'hEEAACC00EAC0EAC0
+  mid_lut3   = 64'hAAAACC00B3C0EAC0
+  mid_lut4   = 64'hCC006F18C03F06DE
+  high_lut1  = 64'h62C0F245A0A0BDBD
+  high_lut2  = 64'hEEAACC80EAC0EA40
+  high_lut3  = 64'hC628DC30CC62EEC0
+  high_lut4  = 64'h88006F18640006DE
+  u_comp23   = 64'hB626FEFC1986FDEA
+  u_comp89   = 64'h6F59CCE4831CECD8
+  u_comp4    = 64'hFFFF77FEEFFEFE96
+  u_comp5    = 64'hFFFF77FFFFFFFFE8
+  u_comp6    = 64'hFEDF74D43FEC013C
+  u_comp7    = 64'hF7FC60557D2F1440
+  hl_lut1    = 64'hEAC00000A0A00000
+  hl_lut2    = 64'hEEAACC00EAC0EAC0
+  hl_lut3    = 64'hE6AACC006AC0EAC0
+  hl_lut4    = 64'h800000004C000000
+  lh_lut1    = 64'hEAC00000A0A00000
+  lh_lut2    = 64'hEEAACC00EAC0EAC0
+  lh_lut3    = 64'hE6AACC006AC0EAC0
+  lh_lut4    = 64'h800000004C000000
+  u88_gp0    = 64'h96969696E8E8E8E8
+  u88_gp1    = 64'h69966996E8E8E8E8
+  u88_gp2    = 64'h69966996E8E8E8E8
+  u88_gp3    = 64'h69966996E8E8E8E8
+  u88_gp4    = 64'h69966996E8E8E8E8
+  u88_gp5    = 64'h69966996E8E8E8E8
+  u88_gp6    = 64'h69966996E8E8E8E8
+  u88_gp7    = 64'h69966996E8E8E8E8
+  u88_gp8    = 64'h96669666A000A000
+[eval-only] done

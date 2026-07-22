@@ -1,0 +1,459 @@
+Log file: /home/xuanqi/tony/work/FPGA/approx_mlp/approx_88_mlp/4/10/04_light_polish/04_light_polish/terminal_log.txt
+Stage: 04_light_cascade_polish
+Args: {'stage_name': '04_light_cascade_polish', 'init_mode': 'json', 'base_inits_json': '/home/xuanqi/tony/work/FPGA/approx_mlp/approx_88_mlp/4/10/04_light_polish/input_best.json', 'cross_init_mode': 'approx62', 'seed': 800, 'mred_denom': 'total', 'eval_only': False, 'random_prob': 0.5, 'train_scope': 'cross_top', 'epochs': 0, 'lr': 0.001, 'init_p': 0.95, 'noise_std': 0.01, 'c_init': 2.0, 'c_out': 2.0, 'c_anneal': False, 'zero_weight': 0.01, 'med_weight': 0.0, 'bin_weight': 1e-05, 'grad_clip': 1.0, 'restart_from_best_every': 0, 'restart_init_p': 0.96, 'restart_noise_std': 0.005, 'restart_lr_decay': 0.8, 'min_lr': 1e-05, 'max_wce': 4500, 'max_er': -1.0, 'max_med': -1.0, 'single_after': False, 'single_only': False, 'single_rounds': 20, 'single_mode': 'first', 'single_lut_names': 'all', 'single_random_order': True, 'pair_after': False, 'pair_only': False, 'pair_rounds': 2, 'pair_mode': 'first', 'pair_lut_names': 'all', 'pair_random_order': True, 'pair_max_pairs': 50000, 'escape_only': False, 'topk': 160, 'candidate_mode': 'top_neutral', 'neutral_top': 240, 'neutral_margin': 0.006, 'escape_iters': 40, 'kmin': 1, 'kmax': 5, 'escape_single_rounds': 5, 'escape_pair_after': True, 'escape_pair_rounds': 1, 'escape_pair_max_pairs': 25000, 'do_single': True, 'do_pair': True, 'do_escape': True, 'do_final_single': False, 'out_dir': '/home/xuanqi/tony/work/FPGA/approx_mlp/approx_88_mlp/4/10/04_light_polish/04_light_polish', 'log_file': 'terminal_log.txt'}
+Projected-accurate approx62 INIT: {'lut1': "64'h6AC00000A0A00000", 'lut2': "64'hE6AA4C80EAC0EAC0", 'lut3': "64'hE62A4C80EA40EA40", 'lut4': "64'h800000004C800000"}
+Base metrics: MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 mred_denom=total
+  low_lut1   = 64'hEAC07C7BA0A04F47
+  low_lut2   = 64'hEEAACC00EAC0EAC0
+  low_lut3   = 64'hE6AACC006AC0EAC0
+  low_lut4   = 64'h800094A74C002F86
+  mid_lut1   = 64'h4A607C7BEAC04F47
+  mid_lut2   = 64'hEEAACC00EAC0EAC0
+  mid_lut3   = 64'hAAAACC00A2C0EAC0
+  mid_lut4   = 64'hCC0094A7E0802F86
+  high_lut1  = 64'hEAC07C7BA0A04F47
+  high_lut2  = 64'hEE22CC00E240EAC0
+  high_lut3  = 64'hEA40EA40E622CC80
+  high_lut4  = 64'h880094A744002F86
+  u_comp23   = 64'hC855FEFC6057F9EE
+  u_comp89   = 64'h22E1FEECA065EDD0
+  u_comp4    = 64'hFFFFFFFEFFFEFE96
+  u_comp5    = 64'hFFFFFFFFFFFFFFE8
+  u_comp6    = 64'hFFFFDFFE7FFE3A96
+  u_comp7    = 64'hFFFF5BFFFFFFB5E8
+  hl_lut1    = 64'hEAC00000A8A00000
+  hl_lut2    = 64'hEEAACC00EAC0EAC0
+  hl_lut3    = 64'hE6AACC006AC0EAC0
+  hl_lut4    = 64'h800000004C000000
+  lh_lut1    = 64'hEAC00000A8A00000
+  lh_lut2    = 64'hEEAACC00EAC0EAC0
+  lh_lut3    = 64'hE6AACC006AC0EAC0
+  lh_lut4    = 64'h800000004C000000
+  u88_gp0    = 64'h96969696E8E8E8E8
+  u88_gp1    = 64'h09966996E8E8E8E8
+  u88_gp2    = 64'h29966996E8E8E8E8
+  u88_gp3    = 64'h49966996E8E8E8E8
+  u88_gp4    = 64'h69966996E8E8E8E8
+  u88_gp5    = 64'h69966996E8E8E8E8
+  u88_gp6    = 64'h69966996E8E8E8E8
+  u88_gp7    = 64'h69966996E8E8E8E8
+  u88_gp8    = 64'h96669666A000A000
+[top-candidates] topk=160 scope=low_lut1,low_lut2,low_lut3,low_lut4,mid_lut1,mid_lut2,mid_lut3,mid_lut4,high_lut1,high_lut2,high_lut3,high_lut4,u_comp23,u_comp89,u_comp4,u_comp5,u_comp6,u_comp7,hl_lut1,hl_lut2,hl_lut3,hl_lut4,lh_lut1,lh_lut2,lh_lut3,lh_lut4,u88_gp0,u88_gp1,u88_gp2,u88_gp3,u88_gp4,u88_gp5,u88_gp6,u88_gp7,u88_gp8 bits=1068
+
+[neutral] scan source=1068 base=MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 margin=0.006
+[neutral] kept=240
+  u_comp89:14 delta=+0.0000000000
+  u_comp89:46 delta=+0.0000000000
+  u_comp6:09 delta=+0.0000000000
+  u_comp6:10 delta=+0.0000000000
+  u_comp6:11 delta=+0.0000000000
+  u_comp6:13 delta=+0.0000000000
+  u_comp6:14 delta=+0.0000000000
+  u_comp6:15 delta=+0.0000000000
+  u_comp6:25 delta=+0.0000000000
+  u_comp6:27 delta=+0.0000000000
+  u_comp6:29 delta=+0.0000000000
+  u_comp6:31 delta=+0.0000000000
+  u_comp6:41 delta=+0.0000000000
+  u_comp6:42 delta=+0.0000000000
+  u_comp6:43 delta=+0.0000000000
+  u_comp6:45 delta=+0.0000000000
+  u_comp6:46 delta=+0.0000000000
+  u_comp6:47 delta=+0.0000000000
+  u_comp6:57 delta=+0.0000000000
+  u_comp6:59 delta=+0.0000000000
+
+[single] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=20 mode=first bits=1068 max_wce=4500
+[single] r=1 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=2 mode=first bits=1068 full_pairs=569778 max_pairs=50000
+[pair] r=1 no improvement, stop
+
+[neutral] scan source=1068 base=MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 margin=0.006
+[neutral] kept=240
+  u_comp89:14 delta=+0.0000000000
+  u_comp89:46 delta=+0.0000000000
+  u_comp6:09 delta=+0.0000000000
+  u_comp6:10 delta=+0.0000000000
+  u_comp6:11 delta=+0.0000000000
+  u_comp6:13 delta=+0.0000000000
+  u_comp6:14 delta=+0.0000000000
+  u_comp6:15 delta=+0.0000000000
+  u_comp6:25 delta=+0.0000000000
+  u_comp6:27 delta=+0.0000000000
+  u_comp6:29 delta=+0.0000000000
+  u_comp6:31 delta=+0.0000000000
+  u_comp6:41 delta=+0.0000000000
+  u_comp6:42 delta=+0.0000000000
+  u_comp6:43 delta=+0.0000000000
+  u_comp6:45 delta=+0.0000000000
+  u_comp6:46 delta=+0.0000000000
+  u_comp6:47 delta=+0.0000000000
+  u_comp6:57 delta=+0.0000000000
+  u_comp6:59 delta=+0.0000000000
+
+[escape] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 iters=40 k=[1,5] neutral=240 polish_bits=1068
+[escape] iter=1/40 perturb MRED=0.0284570579 MED=266.7512 ER=0.7695 WCE=4034 err=50433/65536
+
+[single] start MRED=0.0284570579 MED=266.7512 ER=0.7695 WCE=4034 err=50433/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 mid_lut4:29 0.0284570579->0.0284270908 MED=266.5059 WCE=4034
+[single] KEEP r=2 u88_gp1:59 0.0284270908->0.0283978973 MED=266.6220 WCE=4034
+[single] KEEP r=3 low_lut2:24 0.0283978973->0.0283883335 MED=266.6429 WCE=4034
+[single] KEEP r=4 u_comp6:12 0.0283883335->0.0283623508 MED=266.4849 WCE=4034
+[single] r=5 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=2/40 perturb MRED=0.0283840515 MED=266.5765 ER=0.7585 WCE=4034 err=49708/65536
+
+[single] start MRED=0.0283840515 MED=266.5765 ER=0.7585 WCE=4034 err=49708/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:43 0.0283840515->0.0283727056 MED=266.5211 WCE=4034
+[single] KEEP r=2 u_comp4:42 0.0283727056->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=3/40 perturb MRED=0.0283979202 MED=266.5154 ER=0.7669 WCE=4034 err=50258/65536
+
+[single] start MRED=0.0283979202 MED=266.5154 ER=0.7669 WCE=4034 err=50258/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut2:56 0.0283979202->0.0283792954 MED=266.5504 WCE=4034
+[single] KEEP r=2 u_comp4:13 0.0283792954->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=4/40 perturb MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536
+
+[single] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] r=1 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=5/40 perturb MRED=0.0284151123 MED=266.6446 ER=0.7619 WCE=4034 err=49934/65536
+
+[single] start MRED=0.0284151123 MED=266.6446 ER=0.7619 WCE=4034 err=49934/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:12 0.0284151123->0.0283983378 MED=266.5845 WCE=4034
+[single] KEEP r=2 low_lut3:31 0.0283983378->0.0283946198 MED=266.5303 WCE=4034
+[single] KEEP r=3 u_comp4:24 0.0283946198->0.0283667507 MED=266.4747 WCE=4034
+[single] KEEP r=4 low_lut3:31 0.0283667507->0.0283623508 MED=266.4849 WCE=4034
+[single] r=5 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=6/40 perturb MRED=0.0284629171 MED=266.5687 ER=0.7764 WCE=4034 err=50884/65536
+
+[single] start MRED=0.0284629171 MED=266.5687 ER=0.7764 WCE=4034 err=50884/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:03 0.0284629171->0.0284274902 MED=266.5306 WCE=4034
+[single] KEEP r=2 low_lut1:30 0.0284274902->0.0284243577 MED=266.5066 WCE=4034
+[single] KEEP r=3 low_lut1:25 0.0284243577->0.0283924822 MED=266.5048 WCE=4034
+[single] KEEP r=4 low_lut2:62 0.0283924822->0.0283624963 MED=266.4622 WCE=4034
+[single] KEEP r=5 low_lut1:30 0.0283624963->0.0283623508 MED=266.4849 WCE=4034
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=7/40 perturb MRED=0.0284076405 MED=266.5578 ER=0.7720 WCE=4034 err=50594/65536
+
+[single] start MRED=0.0284076405 MED=266.5578 ER=0.7720 WCE=4034 err=50594/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut1:22 0.0284076405->0.0283763368 MED=266.5610 WCE=4034
+[single] KEEP r=2 u_comp5:47 0.0283763368->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=8/40 perturb MRED=0.0283994816 MED=266.7473 ER=0.7586 WCE=4034 err=49716/65536
+
+[single] start MRED=0.0283994816 MED=266.7473 ER=0.7586 WCE=4034 err=49716/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 mid_lut4:29 0.0283994816->0.0283692637 MED=266.4962 WCE=4034
+[single] KEEP r=2 u_comp5:46 0.0283692637->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=9/40 perturb MRED=0.0283847527 MED=266.5789 ER=0.7604 WCE=4034 err=49836/65536
+
+[single] start MRED=0.0283847527 MED=266.5789 ER=0.7604 WCE=4034 err=49836/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp5:53 0.0283847527->0.0283725021 MED=266.5184 WCE=4034
+[single] KEEP r=2 u_comp4:56 0.0283725021->0.0283678788 MED=266.4904 WCE=4034
+[single] KEEP r=3 u_comp23:09 0.0283678788->0.0283623508 MED=266.4849 WCE=4034
+[single] r=4 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=10/40 perturb MRED=0.0283638007 MED=266.4932 ER=0.7588 WCE=4034 err=49731/65536
+
+[single] start MRED=0.0283638007 MED=266.4932 ER=0.7588 WCE=4034 err=49731/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:60 0.0283638007->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=11/40 perturb MRED=0.0283953479 MED=266.6006 ER=0.7640 WCE=4034 err=50069/65536
+
+[single] start MRED=0.0283953479 MED=266.6006 ER=0.7640 WCE=4034 err=50069/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut3:60 0.0283953479->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=12/40 perturb MRED=0.0283944115 MED=266.6221 ER=0.7588 WCE=4034 err=49731/65536
+
+[single] start MRED=0.0283944115 MED=266.6221 ER=0.7588 WCE=4034 err=49731/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:41 0.0283944115->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=13/40 perturb MRED=0.0283815953 MED=266.5429 ER=0.7590 WCE=4034 err=49740/65536
+
+[single] start MRED=0.0283815953 MED=266.5429 ER=0.7590 WCE=4034 err=49740/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp23:06 0.0283815953->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=14/40 perturb MRED=0.0283954656 MED=266.5340 ER=0.7601 WCE=4034 err=49815/65536
+
+[single] start MRED=0.0283954656 MED=266.5340 ER=0.7601 WCE=4034 err=49815/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut1:27 0.0283954656->0.0283932144 MED=266.5079 WCE=4034
+[single] KEEP r=2 low_lut3:31 0.0283932144->0.0283926895 MED=266.4919 WCE=4034
+[single] KEEP r=3 low_lut2:55 0.0283926895->0.0283679708 MED=266.4515 WCE=4034
+[single] KEEP r=4 low_lut3:31 0.0283679708->0.0283632454 MED=266.4614 WCE=4034
+[single] KEEP r=5 low_lut1:27 0.0283632454->0.0283623508 MED=266.4849 WCE=4034
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=15/40 perturb MRED=0.0283746014 MED=266.5453 ER=0.7590 WCE=4034 err=49739/65536
+
+[single] start MRED=0.0283746014 MED=266.5453 ER=0.7590 WCE=4034 err=49739/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp5:53 0.0283746014->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=16/40 perturb MRED=0.0284451023 MED=267.3068 ER=0.7581 WCE=4034 err=49682/65536
+
+[single] start MRED=0.0284451023 MED=267.3068 ER=0.7581 WCE=4034 err=49682/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 mid_lut3:31 0.0284451023->0.0283772736 MED=266.5926 WCE=4034
+[single] KEEP r=2 u_comp4:43 0.0283772736->0.0283659277 MED=266.5372 WCE=4034
+[single] KEEP r=3 u_comp7:56 0.0283659277->0.0283623508 MED=266.4849 WCE=4034
+[single] r=4 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=17/40 perturb MRED=0.0283891873 MED=266.3668 ER=0.7589 WCE=4034 err=49732/65536
+
+[single] start MRED=0.0283891873 MED=266.3668 ER=0.7589 WCE=4034 err=49732/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 high_lut2:27 0.0283891873->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=18/40 perturb MRED=0.0283795736 MED=266.6071 ER=0.7588 WCE=4034 err=49727/65536
+
+[single] start MRED=0.0283795736 MED=266.6071 ER=0.7588 WCE=4034 err=49727/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:30 0.0283795736->0.0283774756 MED=266.5895 WCE=4034
+[single] KEEP r=2 u_comp5:61 0.0283774756->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=19/40 perturb MRED=0.0283916712 MED=266.5198 ER=0.7615 WCE=4034 err=49903/65536
+
+[single] start MRED=0.0283916712 MED=266.5198 ER=0.7615 WCE=4034 err=49903/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 mid_lut1:59 0.0283916712->0.0283801151 MED=266.5313 WCE=4034
+[single] KEEP r=2 u_comp4:21 0.0283801151->0.0283663692 MED=266.4947 WCE=4034
+[single] KEEP r=3 u_comp5:15 0.0283663692->0.0283636552 MED=266.4879 WCE=4034
+[single] KEEP r=4 u_comp4:07 0.0283636552->0.0283623508 MED=266.4849 WCE=4034
+[single] r=5 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=20/40 perturb MRED=0.0283808830 MED=266.5872 ER=0.7588 WCE=4034 err=49731/65536
+
+[single] start MRED=0.0283808830 MED=266.5872 ER=0.7588 WCE=4034 err=49731/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp5:29 0.0283808830->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=21/40 perturb MRED=0.0283930020 MED=266.5923 ER=0.7588 WCE=4034 err=49729/65536
+
+[single] start MRED=0.0283930020 MED=266.5923 ER=0.7588 WCE=4034 err=49729/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:40 0.0283930020->0.0283650647 MED=266.4918 WCE=4034
+[single] KEEP r=2 u_comp5:15 0.0283650647->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=22/40 perturb MRED=0.0284450341 MED=266.6801 ER=0.7801 WCE=4034 err=51123/65536
+
+[single] start MRED=0.0284450341 MED=266.6801 ER=0.7801 WCE=4034 err=51123/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut3:31 0.0284450341->0.0284430222 MED=266.6420 WCE=4034
+[single] KEEP r=2 u_comp4:57 0.0284430222->0.0284284197 MED=266.5502 WCE=4034
+[single] KEEP r=3 low_lut1:50 0.0284284197->0.0283946198 MED=266.5303 WCE=4034
+[single] KEEP r=4 u_comp4:24 0.0283946198->0.0283667507 MED=266.4747 WCE=4034
+[single] KEEP r=5 low_lut3:31 0.0283667507->0.0283623508 MED=266.4849 WCE=4034
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=23/40 perturb MRED=0.0284033532 MED=266.6089 ER=0.7619 WCE=4034 err=49934/65536
+
+[single] start MRED=0.0284033532 MED=266.6089 ER=0.7619 WCE=4034 err=49934/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:14 0.0284033532->0.0284010516 MED=266.6016 WCE=4034
+[single] KEEP r=2 low_lut2:27 0.0284010516->0.0283791253 MED=266.5450 WCE=4034
+[single] KEEP r=3 u_comp4:12 0.0283791253->0.0283623508 MED=266.4849 WCE=4034
+[single] r=4 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=24/40 perturb MRED=0.0284102456 MED=266.5751 ER=0.7652 WCE=4034 err=50150/65536
+
+[single] start MRED=0.0284102456 MED=266.5751 ER=0.7652 WCE=4034 err=50150/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut3:12 0.0284102456->0.0283763368 MED=266.5610 WCE=4034
+[single] KEEP r=2 u_comp5:47 0.0283763368->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=25/40 perturb MRED=0.0283959931 MED=266.6136 ER=0.7668 WCE=4034 err=50251/65536
+
+[single] start MRED=0.0283959931 MED=266.6136 ER=0.7668 WCE=4034 err=50251/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut2:20 0.0283959931->0.0283808830 MED=266.5872 WCE=4034
+[single] KEEP r=2 u_comp5:29 0.0283808830->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=26/40 perturb MRED=0.0283791532 MED=266.5718 ER=0.7597 WCE=4034 err=49789/65536
+
+[single] start MRED=0.0283791532 MED=266.5718 ER=0.7597 WCE=4034 err=49789/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut3:31 0.0283791532->0.0283747533 MED=266.5820 WCE=4034
+[single] KEEP r=2 u_comp6:28 0.0283747533->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=27/40 perturb MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536
+
+[single] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] r=1 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=28/40 perturb MRED=0.0284295841 MED=266.6086 ER=0.7930 WCE=4034 err=51969/65536
+
+[single] start MRED=0.0284295841 MED=266.6086 ER=0.7930 WCE=4034 err=51969/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 mid_lut1:63 0.0284295841->0.0284108852 MED=266.5746 WCE=4034
+[single] KEEP r=2 low_lut1:24 0.0284108852->0.0283937829 MED=266.5629 WCE=4034
+[single] KEEP r=3 low_lut2:16 0.0283937829->0.0283665469 MED=266.5201 WCE=4034
+[single] KEEP r=4 u_comp5:30 0.0283665469->0.0283623508 MED=266.4849 WCE=4034
+[single] r=5 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=29/40 perturb MRED=0.0284173380 MED=266.7169 ER=0.7605 WCE=4050 err=49842/65536
+
+[single] start MRED=0.0284173380 MED=266.7169 ER=0.7605 WCE=4050 err=49842/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut2:62 0.0284173380->0.0283840741 MED=266.6730 WCE=4050
+[single] KEEP r=2 u_comp4:63 0.0283840741->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=30/40 perturb MRED=0.0283962596 MED=266.4991 ER=0.7652 WCE=4034 err=50150/65536
+
+[single] start MRED=0.0283962596 MED=266.4991 ER=0.7652 WCE=4034 err=50150/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut3:12 0.0283962596->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=31/40 perturb MRED=0.0283924631 MED=266.5118 ER=0.7588 WCE=4034 err=49731/65536
+
+[single] start MRED=0.0283924631 MED=266.5118 ER=0.7588 WCE=4034 err=49731/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 high_lut1:31 0.0283924631->0.0283669540 MED=266.4996 WCE=4034
+[single] KEEP r=2 u_comp5:14 0.0283669540->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=32/40 perturb MRED=0.0283698407 MED=266.5108 ER=0.7588 WCE=4034 err=49731/65536
+
+[single] start MRED=0.0283698407 MED=266.5108 ER=0.7588 WCE=4034 err=49731/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:23 0.0283698407->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=33/40 perturb MRED=0.0284086441 MED=266.6584 ER=0.7594 WCE=4034 err=49767/65536
+
+[single] start MRED=0.0284086441 MED=266.6584 ER=0.7594 WCE=4034 err=49767/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp6:24 0.0284086441->0.0283791676 MED=266.5037 WCE=4034
+[single] KEEP r=2 u_comp5:52 0.0283791676->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=34/40 perturb MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536
+
+[single] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] r=1 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=35/40 perturb MRED=0.0284175423 MED=266.5112 ER=0.7962 WCE=4034 err=52177/65536
+
+[single] start MRED=0.0284175423 MED=266.5112 ER=0.7962 WCE=4034 err=52177/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut3:30 0.0284175423->0.0283912086 MED=266.4909 WCE=4034
+[single] KEEP r=2 low_lut1:18 0.0283912086->0.0283743087 MED=266.4810 WCE=4034
+[single] KEEP r=3 low_lut1:60 0.0283743087->0.0283623508 MED=266.4849 WCE=4034
+[single] r=4 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=36/40 perturb MRED=0.0284156881 MED=266.6406 ER=0.7602 WCE=4034 err=49820/65536
+
+[single] start MRED=0.0284156881 MED=266.6406 ER=0.7602 WCE=4034 err=49820/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp4:47 0.0284156881->0.0284088072 MED=266.6033 WCE=4034
+[single] KEEP r=2 u_comp23:09 0.0284088072->0.0284008319 MED=266.5970 WCE=4034
+[single] KEEP r=3 low_lut2:27 0.0284008319->0.0283789056 MED=266.5403 WCE=4034
+[single] KEEP r=4 u_comp4:29 0.0283789056->0.0283703262 MED=266.4913 WCE=4034
+[single] KEEP r=5 u_comp23:41 0.0283703262->0.0283678788 MED=266.4904 WCE=4034
+
+[pair] start MRED=0.0283678788 MED=266.4904 ER=0.7603 WCE=4034 err=49828/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] KEEP r=1 u_comp23:09+u_comp7:61 0.0283678788->0.0283623508 MED=266.4849 WCE=4034
+[escape] iter=37/40 perturb MRED=0.0283787403 MED=266.4781 ER=0.7606 WCE=4034 err=49847/65536
+
+[single] start MRED=0.0283787403 MED=266.4781 ER=0.7606 WCE=4034 err=49847/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 mid_lut2:26 0.0283787403->0.0283623508 MED=266.4849 WCE=4034
+[single] r=2 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=38/40 perturb MRED=0.0283838540 MED=266.5095 ER=0.7800 WCE=4034 err=51116/65536
+
+[single] start MRED=0.0283838540 MED=266.5095 ER=0.7800 WCE=4034 err=51116/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 u_comp5:14 0.0283838540->0.0283792507 MED=266.4948 WCE=4034
+[single] KEEP r=2 low_lut1:18 0.0283792507->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=39/40 perturb MRED=0.0283789108 MED=266.5196 ER=0.7668 WCE=4034 err=50251/65536
+
+[single] start MRED=0.0283789108 MED=266.5196 ER=0.7668 WCE=4034 err=50251/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 low_lut2:20 0.0283789108->0.0283638007 MED=266.4932 WCE=4034
+[single] KEEP r=2 u_comp4:60 0.0283638007->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop
+[escape] iter=40/40 perturb MRED=0.0284002615 MED=266.5800 ER=0.7588 WCE=4034 err=49727/65536
+
+[single] start MRED=0.0284002615 MED=266.5800 ER=0.7588 WCE=4034 err=49727/65536 rounds=5 mode=first bits=1068 max_wce=4500
+[single] KEEP r=1 high_lut1:31 0.0284002615->0.0283774756 MED=266.5895 WCE=4034
+[single] KEEP r=2 u_comp5:61 0.0283774756->0.0283623508 MED=266.4849 WCE=4034
+[single] r=3 no improvement, stop
+
+[pair] start MRED=0.0283623508 MED=266.4849 ER=0.7588 WCE=4034 err=49731/65536 rounds=1 mode=first bits=1068 full_pairs=569778 max_pairs=25000
+[pair] r=1 no improvement, stop

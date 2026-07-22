@@ -1,0 +1,34 @@
+{
+  "stage": "03_relaxed_wce1000_candidate+final_single",
+  "epoch": "03_relaxed_wce1000_candidate+final_single",
+  "loss": null,
+  "metrics": {
+    "total_cases": 4096,
+    "error_cases": 2962,
+    "ER": 0.72314453125,
+    "MED": 116.1875,
+    "NED": 0.029273746535651297,
+    "MRED": 0.10808487320235002,
+    "WCE": 930
+  },
+  "inits": {
+    "low_lut1": "64'hEAC01926A0A0FB88",
+    "low_lut2": "64'hEEAACC00EAC0EAC0",
+    "low_lut3": "64'hC422CC00C840EAC0",
+    "low_lut4": "64'h8800D0CB64001EFF",
+    "mid_lut1": "64'hEAC01926A0A0FB88",
+    "mid_lut2": "64'hEEAACC00EAC0EAC0",
+    "mid_lut3": "64'hC4AA4C0048C0EAC0",
+    "mid_lut4": "64'h8800D0CBE4801EFF",
+    "high_lut1": "64'hEAC01926A0A0FB88",
+    "high_lut2": "64'hEEAACC00EAC0EAC0",
+    "high_lut3": "64'hCE2ACD034462EEC0",
+    "high_lut4": "64'h8800D0CBE4001EFF",
+    "u_comp23": "64'h7214FFF855E0FEE6",
+    "u_comp89": "64'hE123CC682DB9ECD6",
+    "u_comp4": "64'hFFFFEEFEFFFEFE96",
+    "u_comp5": "64'hFFFFEEFFFFFFFFE8",
+    "u_comp6": "64'hDFFDDEDC55FECE96",
+    "u_comp7": "64'hF7FE44DD77BFFFC8"
+  }
+}

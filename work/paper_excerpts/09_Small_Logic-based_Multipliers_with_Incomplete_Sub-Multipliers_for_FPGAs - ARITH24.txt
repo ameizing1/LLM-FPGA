@@ -1,0 +1,623 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Small_Logic-based_Multipliers_with_Incomplete_Sub-Multipliers_for_FPGAs - ARITH24.pdf
+PAGES: 8
+--- PAGE 1 ---
+Small Logic-based Multipliers with
+Incomplete Sub-Multipliers for FPGAs
+Andreas B ¨ottcher, Martin Kumm
+Fulda, University of Applied Sciences, Faculty of Applied Computer Science, Fulda, Germany
+andreas.boettcher@cs.hs-fulda.de, martin.kumm@cs.hs-fulda.de
+Abstract—There is a recent trend in artiﬁcial intelligence (AI)
+inference towards lower precision data formats down to 8 bits
+and less. As multiplication is the most complex operation in
+typical inference tasks, there is a large demand for efﬁcient small
+multipliers. The large DSP blocks have limitations implementing
+many small multipliers efﬁciently. Hence, this work proposes
+a solution for better logic-based multipliers that is especially
+beneﬁcial for small multipliers. Our work is based on the
+multiplier tiling method in which a multiplier is designed out of
+several sub-multiplier tiles. The key observation we made is that
+these sub-multipliers do not necessarily have to perform a com-
+plete (rectangular) N×K multiplication and more efﬁcient sub-
+multipliers are possible that are incomplete (non-rectangular).
+This proposal ﬁrst seeks to identify efﬁcient incomplete irregular
+sub-multipliers and then demonstrates improvements over state-
+of-the-art designs. It is shown that optimal solutions can be found
+using integer linear programming (ILP), which are evaluated in
+FPGA synthesis experiments.
+Index Terms—small multiplier, tiling, computer arithmetic,
+FPGA,
+I. I NTRODUCTION
+With multiplication being one of the most pervasive opera-
+tions in computer arithmetic, its efﬁcient implementation is of
+ongoing interest. When targeting FPGAs the design methods
+have to consider the embedded DSP blocks and look-up-tables
+(LUTs) as the primary resources of modern devices. DSP
+blocks are usually the most convenient to use, as they allow the
+implementation of a multiplication by themselves (for example
+up to one 27×27 or two 18×18 signed or unsigned on Intel
+Stratix10 or 25× 18 signed or 24× 17 unsigned on AMD 7
+Series) but are a relatively limited resource. Multiplier design
+methods have to accommodate for that to avoid the under-
+utilization or premature depletion of DSP resources when
+generating complex circuits [1]–[4]. A multitude of methods
+have been proposed to remedy the underlying design challenge
+[1]–[14].
+In [9], [12], [13], [15] the extraction of smaller multipliers
+from one DSP by additional LUT-based circuitry was pro-
+posed. Conversely, when larger multipliers than the size of
+a single DSP are needed, Karatsuba’s algorithm can be used
+to reduce the number of DSPs [1], [14]. With Slice LUTs
+being one of the most proliﬁc resources on FPGAs, several
+concepts that efﬁciently use LUT resources in conjunction with
+the fast-carry-chain like implementations of vendor-speciﬁc
+Booth-Arrays [3], [7], [8], Baugh-Wooley-Multipliers [5] and
+several optimizations with the fractal-synthesis approach [10],
+[11] were devised.
+Another design process is multiplier tiling [1] which seeks
+to achieve the efﬁcient use of DSPs by combining them with
+supplementary LUT-based sub-multipliers. But as aside from
+heuristics [2], [6], [14] also optimal [4], [16] methods for
+solving the underlying tiling problem are known, in the sense
+that for a given set of sub-multipliers (tiles) the combination
+with the least realization cost in terms of logic resources
+is found while constraining the use of DSPs to a maximal
+number. Hence, to generate smaller designs as in the present
+proposal, where DSPs would be considerably underutilized,
+by constraining the number of DSPs to zero, multiplier tiling
+can be used to generate logic-only solutions which constitute
+the optimal use of LUT resources. Multipliers generated with
+tiling usually consist of the sub-multipliers (tiles) as partial
+product generators, which are subsequently compressed on a
+compressor tree to form a single output vector. The compressor
+tree design for FPGAs has to consider certain peculiarities
+in contrast to ASICs, as it has to be implemented within
+the conﬁnes of the considered target architecture. As full-
+or half-adders under-utilize the FPGA slice hardware, more
+efﬁcient structures like generalized parallel counters (GPCs)
+[17]–[25], 4:2 row compressors [22], [26], [27] and the ternary
+adder [28], [29] were devised, which utilize the fast-carry-
+chain of modern FPGAs. The introduction of the additional
+compressors signiﬁcantly extended the design space to be
+explored to ﬁnd efﬁcient solutions, which necessitates ad-
+vanced concepts for compressor tree design beyond Dadda
+[30]. Several heuristic [18], [20], [21] and optimal [19], [23],
+[32]–[35] methods have been presented for this task. Since the
+selection of the partial product generators (tiles), compressor
+tree and ﬁnal adder design are interdependent problems, as a
+different choice in one of the steps can result in an alternative
+combination becoming the the optimal solution in another, a
+recent combined approach [35] that optimizes both the tiling
+and the compressor tree simultaneously, is used in the present
+proposal.
+Except for the Karatsuba algorithm with rectangular DSPs
+[36] and DSP super tiles [1] the previous mapping schemes
+usually aimed on creating rectangular (sub-)multipliers.
+In AI inference tasks, it is commonly accepted that 8 bit
+integers are sufﬁcient to reach ﬂoating point accuracy with a
+proper scaling and quantization-aware training in many appli-
+cations. Recent transformer networks are typically quantized
+to even 4 bits. This motivates this work to focus on small
+multipliers.
+124
+2024 IEEE 31st Symposium on Computer Arithmetic (ARITH)
+979-8-3503-8432-1/24/$31.00 ©2024 IEEE
+DOI 10.1109/ARITH61463.2024.00029
+2024 IEEE 31st Symposium on Computer Arithmetic (ARITH) | 979-8-3503-8432-1/24/$31.00 ©2024 IEEE | DOI: 10.1109/ARITH61463.2024.00029
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:58 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 2 ---
+036
+0
+2
+4
+M1M2
+M3M4
+↓
+y
+←x
+(a)
+20212223242526272829
+M1
+M2
+M3M4
+(b)
+Fig. 1: Tiling (a) and compressor tree (b) of a6×4-multiplier,
+composed of four 3× 2-tiles.
+The present proposal
+• presents a novel class of incomplete logic-based (sub-)
+multipliers that map efﬁciently to most modern FPGAs,
+• demonstrates the integration and use in conjunction with
+the multiplier tiling methodology to design complete
+multipliers,
+• demonstrates that the proposed designs yield a reduction
+in utilized resources compared to other state-of-the-art
+logic-based multiplier design methods while maintaining
+similar properties in terms of critical path delay and
+latency.
+II. M ULTIPLIER TILING
+Consider a large 2WX ×2WY sized multiplier. TheX×Y
+multiplication operation can be decomposed into the weighted
+sum of four WX × WY sub-multiplicationsM1,..,4 according
+to
+X× Y = (xh2WX + xl
+)(yh2WY + yl
+)
+= xhyh
+M4
+2WX +WY + xhyl
+M3
+2WX + xlyh
+M2
+2WY + xlyl
+M1
+.
+(1)
+Thereby the input vectors X and Y are split into a most and
+least signiﬁcant sub-wordxh,x l and yh,y l with a respective
+size ofWX and WY . Accordingly by splitting the input vectors
+X and Y into the individual bits, this process can be repeated
+down to the respective partial product bits, as they would be
+generated by the AND-gates of a Bough-Wooley multiplier.
+However, in practical tilings usually larger multipliers are
+used which map more efﬁciently to the hardware of the
+particular FPGA. This process is considered graphically with
+the multiplier tiling methodology, such that the multiplier to
+be realized is represented as a rectangular2WX × 2WY sized
+board which is subdivided into a grid according to the bits of
+the input vectors X, Y, where each position corresponds to a
+partial product bit of an AND-array-multiplier.
+Fig. 1 shows an example of a 6× 4 multiplier, assembled
+from four 3×2 sub-multiplier tilesM1,..,4. Each of the 3×2-
+tiles generates a 5-bit output vector which subsequently has
+to by processed on the compressor tree to calculate the output
+vector of the multiplier as shown in Fig. 1b.
+TABLE I: Properties of LUT- and DSP-based multipliers
+[14] targeting AMD FPGAs, where cost mult
+e and costtile
+t are
+the number of LUT6 for the single multiplier and multi-
+plier+compression, respectively
+Type Shape At costmult
+t costtile
+t Wout Et Dt
+d1 ×1 1 1 1.65 1 0.625 0
+c1 ×2/2 ×1 2 1 2.3 2 0.87 0
+b2 ×3/3 ×2 6 3 6.25 5 0.96 0
+a3 ×3 9 5 8.9 6 1.011 0
+e2 ×k / k×22 kk +1 1.65 k + 2.3 k+2 2k
+1.65k+2.3 0
+-2 4 ×1 7/2 4×17 408 0 26.65 41 15.30 1
+(a) 3× 3 (b) 3× 2/2× 3 (c) 1× 2/2× 1 (d) 1× 1
+......
+......
+(e) k× 2 / 2× k
+Fig. 2: Geometric shapes of rectangular LUT-based tiles [14]
+A. Conventional Rectangular Multiplier Tiles
+The previous multiplier tiling based design methods [4],
+[14], [16], [35] used, aside from DSP tiles, a set of logic-
+based sub-multiplier tiles listed in Table I and illustrated in
+Fig. 2. Those tiles possess several properties relevant for
+the tiling algorithm. First of all, the tiles have a particular
+shape deﬁned by the input vectors X and Y . The previously
+used LUT-based multipliers usually had a rectangular shape.
+Associated with the shape, the tiles cover a particular number
+of positions on the board which deﬁnes their geometric area
+At. Furthermore, the implementation of the sub-multiplier
+tiles has certain realization costs in terms of 6-input look-
+up-tables deﬁned by costmult
+t . Each tile also generates a Wout
+wide output vector of partial product bits calculated by the
+individual LUTs. The partial product bits also entail additional
+costs for the calculation of the ﬁnal result on the compressor
+tree, which had been shown in [4] experimentally to be about
+0.65 LUTs per bit. So the cost of utilizing a particular tile
+costtile
+t can be described as,
+costtile
+t = costmult
+t + ˜cost
+comp
+t (2)
+where ˜cost
+comp
+t is the compression cost of approximately
+0.65LUT
+Bit · Wt
+out. This can further be used to derive a measure
+of efﬁciency Et for a particular tile as the quotient of the
+geometric area covered by the tile divided by its realization
+cost (Area per LUT)
+Et = At
+costtile
+t
+. (3)
+125
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:58 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 3 ---
+202122
+212223
+↓
+y
+←x
+20
+21
+202122
+(a)
+202122
+212223
+↓
+y
+←x
+20
+21
+202122
+(b)
+Fig. 3: Motivational example
+The efﬁciency of the tiles is provided for reference purposes
+to benchmark the properties of the tile, whereas the utilized
+combined optimization of the tiling and compression uses the
+exact number of LUTs required for compression.
+Tiles like the embedded DSPs as shown in the bottom row of
+Table I can also possess DSP costs denoted byDt according to
+the number of utilized DSPs. Note that the DSP block do not
+have any LUT cost costmult
+t on their own but cause compression
+costs, so they are listed with cost tile
+t =2 6.65LUT assuming
+complete utilization. When underutilized the cost has to be
+calculated dynamically.
+B. Motivational Example
+Consider the rectangular3× 2 tile as illustrated in Fig. 3a.
+The maximal output value in the unsigned case is (23 − 1)×
+(22 − 1) = 21 , so the required word size is Wt
+out =5 bit.
+Together with the2+3 = 5 input bits, the tile is realized using
+ﬁve 5-input LUTs (in the following denoted as 5-LUTs). The
+6-LUTs of recent FPGAs can be subdivided into two 5-LUTs,
+so, three 6-LUTs are necessary to implement this tile. Note
+that one of the 6-LUTs remains underutilized as it is only
+occupied by one 5-LUT. The other 5-LUT is typically wasted
+as all its inputs are already ﬁxed. The overall cost of the tile
+is
+costtile
+t = costmult
+t +0 .65· Wt
+out =3+3 .25 = 6.25 (4)
+and the efﬁciency with a total geometric area of At =6 is
+Et = 6
+6.25 =0 .96. (5)
+The maximal output value can be alternatively computed
+by summing the weights shown in Fig. 2a, i.e., 20 +2 1 +
+21 +2 2 +2 2 +2 3 =2 1. Now consider how the properties of
+the tile would change if the most signiﬁcant partial product bit
+with weight23 would be omitted (Fig. 3b). As a consequence,
+the maximum output value is reduced to 21− 8=1 3 , thus,
+requiring onlyWt
+out =4 output bits. This also leads to a better
+utilizing of 14 out of 16 possible values (88%) instead of the
+22 out of 32 values (69%) of the 3× 2 tile.
+Accordingly, only four 5-LUTs are needed to realize the
+tile, which can efﬁciently be mapped to two 6-LUTs. This
+corresponds to total realization costs of
+costtile
+t =2+2 .6=4 .6 (6)
+and an efﬁciency with the area reduced by one to At =5 is
+Et = 5
+4.6 =1 .087. (7)
+It can be observed that the omission of one the partial product
+bits leads to a new tile variant, which is more efﬁcient then
+the previously known LUT tiles, and hence allows for tilings
+which require less LUTs per area. Note that in terms of
+efﬁciency the same could be achieved by removing the least
+signiﬁcant partial product bit with weight 20 at the top right
+corner, which also necessitates the inclusion of an additional
+bit for a single position, that can only be mapped as an
+underutilized LUT. In this case the omitted LSB of the tile
+is effectively always zero. Without context those structures
+could appear useless as they do not compute a complete
+multiplication, but as a tile it can be used to form larger
+complete multipliers. This observations raise the question
+which other efﬁcient structures are possible.
+III. S EARCHING EFFICIENT STRUCTURES
+This section covers the realization of a complete search for
+efﬁcient structures. As elaborated previously, multiplier tiles
+can realize random partial products within a larger multiplier,
+which can be represented by positions on the board. This
+deﬁnes the applicable design space to be explored. Application
+speciﬁc multipliers can be required in random sizes, but the
+search space has to be constructed to manageable dimensions.
+The search space has to incorporate all viable combinations
+that could be mapped within the 6-input LUTs present on most
+modern FPGAs. The largest rectangular multiplier without the
+use of the fast-carry-chain is the 3× 3, which is constrained
+by the six available inputs of the LUTs on which the equation
+of a particular partial product bit may depend on. Hence
+for example, a 4 × 2 or 5 × 1 multiplier would also be
+possible but is less efﬁcient in terms of covered area per LUT.
+Also geometrically stretched out versions of the multipliers
+with gaps between the utilized input variables should be
+possible within the search space, as they can be realized
+with otherwise the same properties. This deﬁnes the evaluated
+search space, as combinations beyond this would constitute
+redundant, even more stretched out versions of other tiles. A
+geometric bound of4× 4 was used here, which results in 216
+possible combinations to be evaluated.
+A. Implementation of the Search
+To enumerate the evaluated 4 × 4 search space, as each
+partial product on the board can either be present or absent,
+the area was abstracted as a 16-bit binary number. As this
+includes a considerable number of redundant patterns, each
+combination not geometrically aligned with active partial
+products on the top and right of the board are discarded.
+The evaluation of the patterns is well parallelizable, as it only
+depends on the respective pattern. So multiple value ranges
+can be investigated in concurrent tasks. Based on the partial
+product pattern and the signedness of the input vectors the
+output bits of the tile can be tabulated as a function of all
+possible binary combinations of the inputs. From the truth
+126
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:58 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 4 ---
+Et =1 .010
+Et =1 .011
+Et =1 .013
+Et =1 .014
+Et =1 .047
+Et =1 .053
+Et =1 .071
+Et =1 .087
+Fig. 4: First 24 Tiles from the efﬁciency classes above Et =1.0 of the 4× 4 search space
+x0
+y0
+x1
+y1
+x2
+y2
+x3
+y3
+x4
+y4
+x5
+y5 ↓
+y
+← x
+(a)
+x0
+y0
+x1
+y1
+x2
+y2
+x3
+y3
+x4
+y4
+x5
+y5 ↓
+y
+← x
+(b)
+Fig. 5: Design space for Tiles of the highest efﬁciency
+table a set of equations for the tile outputs can be created.
+The equations were subsequently simpliﬁed with the Quine-
+McClusky method to remove redundant input-dependencies.
+The necessity for the simpliﬁcation is best explained by
+using an example. Take the truth table of the 3 × 3 tile in
+Fig. 2a: it depends on six input bits and produces 3+3=6
+output bits. Hence, a naive implementation would required six
+6-LUTs. However, the simpliﬁed equations for the two output
+LSBs results in
+r
+0 = x0y0 (8)
+r1 = x1y0 + x0y1 . (9)
+Hence, they only depend on four variables that can be mapped
+into a single 6-LUT (realizing two 5-LUTs).
+Within the resulting equations the number of utilized inputs
+can be counted to determine the optimal LUT-mapping by
+evaluating the possible combinations to subdivide a 6-LUT
+into two 5-LUTs, or placing an equation with 7 input depen-
+dencies into two 6-LUTs, etc. So the efﬁciency of a particular
+tile in terms of the utilized LUTs in relation the the covered
+area can be determined to insert the tile to a linked list to hold
+the results according to its efﬁciency level.
+Note that the search has to be repeated for the four com-
+binations of the signedness of the input vectors X, Y , which
+in each case can lead to yielding different efﬁciencies for a
+particular pattern.
+B. Identiﬁed Structures
+The search yielded structures with a multitude of efﬁciency
+levels up to E =1 .087. Examples of tiles from the efﬁciency
+classes above 1.0 are given in Fig. 4. As the tiles with the
+highest efﬁciency by themselves are sufﬁcient to generate
+complete tilings, we focus on those variants that generate
+overall efﬁcient designs. In total 31 structures were found
+within the highest efﬁciency class. At ﬁrst glance these might
+appear to contain some randomness (see bottom row of Fig. 4),
+their structure actually follows a few simple geometric design
+patterns. As shown in Fig. 5, the tiles can be broken down
+into in its most generalized form into a horizontal or vertical
+s-shaped element supplemented by an associated 1×1 element
+which can be placed in the green area, such that an additional
+independent partial product bit is generated. All tiles within
+the highest efﬁciency class can be derived according to this
+rule, where some are redundant in the sense that the considered
+structure is placed twice within a tile. In terms of its properties
+the tiles cover 5 positions on the board, generate 4 partial
+product bits and hence require 2 6-LUTs, each subdivided in
+two 5-LUTs to be realized. For example, consider the s-shaped
+element in Fig. 5b, which after simpliﬁcation is described by
+r
+0 = y3y2x3 + y2x2x3 + y3y2x2 + y3x2x3
+r1 = y3x2 x4x3 + y3x2x4x3 + y3y2x4 + y2x4x3 + y3y2x3
+r2 = y3y2x4x3 + y3y2x2x3.
+Outputs r1,r 2 already use 5 input variables, but r0 requires
+only 4 inputs. Hence, another arbitrary input can be combined
+with one of these 4 inputs to produce another partial product
+on a 1× 1 tile. So for example when placing the 1× 1-element
+at (3,5), the partial product
+r
+3 = y5x3
+can be computed without additional cost. Note that in the green
+hatched area the 1× 1-element has to be tabulated separately
+to permit to map it into two 6-LUTs as the corresponding
+equation would otherwise depend on 6 variables.
+127
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:58 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 5 ---
+Et =1 .087
+#uses = 457
+Et =1 .087
+#uses = 453
+Et =1 .087
+#uses = 399
+Et =1 .087
+#uses = 383
+Et =0 .87
+#uses = 174
+Et =0 .87
+#uses = 167
+Et =1 .087
+#uses = 103
+Et =1 .087
+#uses = 101
+Et =1 .087
+#uses =9 7
+Et =1 .087
+#uses =9 6
+Et =1 .087
+#uses =9 0
+Et =1 .087
+#uses =7 8
+Et =0 .87
+#uses =7 8
+Et =1 .071
+#uses =6 4
+Et =1 .071
+#uses =6 3
+Et =1 .087
+#uses =5 5
+Et =1 .011
+#uses =5 4
+Et =1 .087
+#uses =5 3
+Et =0 .625
+#uses =4 0
+Et =1 .013
+#uses =2 9
+Et =0 .87
+#uses =3 1
+Et =0 .87
+#uses =3 0
+Et =1 .013
+#uses =5 4
+Et =0 .87
+#uses =2 8
+Et =0 .87
+#uses =2 5
+Et =1 .071
+#uses =1 9
+Et =1 .010
+#uses =1 8
+Et =0 .87
+#uses =1 1
+Et =1 .071
+#uses =1 0
+Et =0 .87
+#uses =1 0
+Et =0 .87
+#uses =9
+Et =1 .071
+#uses =8
+Et =1 .087
+#uses =3
+Et =1 .087
+#uses =2
+Et =1 .071
+#uses =2
+Et =0 .87
+#uses =1
+Et =1 .087
+#uses =1
+Et =0 .87
+#uses =1
+Et =0 .87
+#uses =1
+Fig. 6: Geometric shapes of incomplete LUT-based tile-set used for experiments
+C. Selecting the Tile Set for the Optimization
+As the the complete list of tiles from the 4× 4 search
+space yielded an unpractical number of different tiles to be
+included in the optimization of the tiling, the tile set has to
+be narrowed down to a selection of the most efﬁcient tile
+variants. Accordingly, all tiles with an efﬁciency above 1.0
+were selected and cleaned for redundancies which could be
+described as a combination of different tiles, yielding a tile set
+of 339 elements. Optimization experiments for all multiplier
+dimensions between 1× 1 and 16× 16 were conducted, for
+which the solver generated optimal solutions up to about
+13×14 multipliers within a timeout of 10 h. Beyond this, the
+solutions were only feasible due to the complexity of the
+model due to the amount of tiles. Within those experiments
+72 of the 339 tiles were actually used. The experiments
+were subsequently repeated with the set of 72 used tiles, of
+which 54 were actually used in the next round. Now all the
+results were optimal within the timeout and improvements
+could be observed in the cases that were previously not
+proven to be optimal due to the timeout. When examining
+those 54 tiles geometrically it became apparent, that repeating
+redundant elements are present in tiles from some of the
+efﬁciency classes, which could be substituted by another tile
+with higher efﬁciency and a helper tile, while maintaining the
+same realization costs, as illustrated in Fig. 7.
+Fig. 7: Examples of the decomposition of tiles in combinations
+of other helper tiles
+It can be observed, that the introduction of the helper tiles
+does not only allow for the substitution of tiles from some
+efﬁciency classes in the remaining list, but also the creation
+of all tiles in the efﬁciency classes where the redundancies
+occur from the initial tile set (E
+t =1 .013 and Et =1 .014 in
+Fig. 4). Most of the helper tiles cover two positions which are
+positioned relative to each other within the 4× 4 space, which
+resulted in a tile set of 55 elements. The experiments showed
+slight improvements over the tile set without substitutions, and
+that 41 of the 55 tiles were actually used. Those 41 tiles minus
+the 2× 3/3×2 elements which had been introduced as a helper
+tile, but could be removed without changes to the optimization
+objective, form the basis for the ﬁnal tile set that was used for
+the synthesis experiments. The ﬁnal tile set is shown in Fig. 6,
+sorted by their number of uses (#uses) in the experiment.
+IV . R
+ESULTS
+A. Experimental Setup
+The proposed incomplete tiles were added to the multiplier
+tiling framework of the open-source VHDL-code generator
+FloPoCo [37]. For the experiments, the combined ILP-based
+optimization of the tiling and the compressor tree of [35]
+was used in conjunction with Gurobi 11 as the solver. The
+generated VHDL designs were subsequently synthesized and
+implemented with Vivado version 2022.1 for a Kintex 7
+(xc7k70tfbv484-3) target FPGA.
+B. Comparison With Previous Tiling
+Table II shows a comparison of synthesis experiment re-
+sults for multipliers up to 16× 16 for the proposed incom-
+plete multiplier tiles, as well as the relative improvement in
+comparison to the tiling using rectangular tiles [35]. Using
+incomplete multiplier tiles offers improvements in terms of
+utilized LUTs in the vast majority of cases. The reductions
+are up to 17.6% with an average of 3.7%. The relative LUT
+reduction drops with increasing multiplier sizes but is still
+signiﬁcant up to 16× 16. Hence, incomplete multiplier tiles
+are most efﬁcient for small multiplier sizes. Some exceptions
+show no reductions, which are the very small (single LUT
+per output bit) multipliers and the ones which can be realized
+efﬁciently by the efﬁcient 2× k-tiles only. For reference, the
+average improvement in the considered cases to the inferred
+multiplier (VHDL “*” operator) is 18.6%.
+The objective usually closely matches the synthesis results,
+and as expected, are in every case better or equal than with
+the reference tile set. Although there is always some synthesis
+128
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:58 UTC from IEEE Xplore.  Restrictions apply. 

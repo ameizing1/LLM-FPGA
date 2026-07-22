@@ -1,0 +1,722 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\FlightLLM Efficient LLM Inference with a Complete Mapping Flow on FPGAs - FPGA25.pdf
+PAGES: 12
+--- PAGE 1 ---
+FlightLLM: Efficient Large Language Model Inference
+with a Complete Mapping Flow on FPGAs
+Shulin Zeng∗
+Tsinghua University
+Infinigence-AI
+Jun Liu∗
+Shanghai Jiao Tong University
+Infinigence-AI
+Guohao Dai†
+Shanghai Jiao Tong University
+Infinigence-AI
+Xinhao Yang
+Tsinghua University
+Infinigence-AI
+Tianyu Fu
+Tsinghua University
+Infinigence-AI
+Hongyi Wang
+Tsinghua University
+Infinigence-AI
+Wenheng Ma
+Tsinghua University
+Hanbo Sun
+Tsinghua University
+Shiyao Li
+Tsinghua University
+Infinigence-AI
+Zixiao Huang
+Tsinghua University
+Yadong Dai
+Infinigence-AI
+Jintao Li
+Infinigence-AI
+Zehao Wang
+Infinigence-AI
+Ruoyu Zhang
+Infinigence-AI
+Kairui Wen
+Infinigence-AI
+Xuefei Ning
+Tsinghua University
+Yu Wang†
+Tsinghua University
+ABSTRACT
+Transformer-based Large Language Models (LLMs) have made
+a significant impact on various domains. However, LLMs’ effi-
+ciency suffers from both heavy computation and memory over-
+heads. Compression techniques like sparsification and quantization
+are commonly used to mitigate the gap between LLM’s computa-
+tion/memory overheads and hardware capacity. However, existing
+GPU and transformer-based accelerators cannot efficiently process
+compressed LLMs, due to the following unresolved challenges: low
+computational efficiency, underutilized memory bandwidth, and
+large compilation overheads.
+This paper proposes FlightLLM, enabling efficient LLMs infer-
+ence with a complete mapping flow on FPGAs. In FlightLLM, we
+highlight an innovative solution that the computation and mem-
+ory overhead of LLMs can be solved by utilizing FPGA-specific
+resources (e.g., DSP48 and heterogeneous memory hierarchy). We
+propose a configurable sparse DSP chain to support different spar-
+sity patterns with high computation efficiency. Second, we propose
+an always-on-chip decode scheme to boost memory bandwidth
+with mixed-precision support. Finally, to make FlightLLM available
+for real-world LLMs, we propose a length adaptive compilation
+∗Both authors contributed equally to this research.
+†Corresponding authors. Email: daiguohao@sjtu.edu.cn, yu-wang@tsinghua.edu.cn
+This work is licensed under a Creative Commons Attribution
+International 4.0 License.
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA
+© 2024 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-0418-5/24/03
+https://doi.org/10.1145/3626202.3637562
+method to reduce the compilation overhead. Implemented on the
+Xilinx Alveo U280 FPGA, FlightLLM achieves 6.0× higher energy
+efficiency and 1.8× better cost efficiency against commercial GPUs
+(e.g., NVIDIA V100S) on modern LLMs (e.g., LLaMA2-7B) using
+vLLM and SmoothQuant under the batch size of one. FlightLLM
+beats NVIDIA A100 GPU with 1.2× higher throughput using the
+latest Versal VHK158 FPGA.
+CCS CONCEPTS
+• Hardware→ Hardware accelerators; • Computer systems
+organization→ Reconfigurable computing.
+KEYWORDS
+Large Language Model, FPGA, Complete Mapping Flow
+ACM Reference Format:
+Shulin Zeng, Jun Liu, Guohao Dai, Xinhao Yang, Tianyu Fu, Hongyi Wang,
+Wenheng Ma, Hanbo Sun, Shiyao Li, Zixiao Huang, Yadong Dai, Jintao
+Li, Zehao Wang, Ruoyu Zhang, Kairui Wen, Xuefei Ning, and Yu Wang.
+2024. FlightLLM: Efficient Large Language Model Inference with a Com-
+plete Mapping Flow on FPGAs. In Proceedings of the 2024 ACM/SIGDA
+International Symposium on Field Programmable Gate Arrays (FPGA ’24),
+March 3–5, 2024, Monterey, CA, USA. ACM, New York, NY, USA, 12 pages.
+https://doi.org/10.1145/3626202.3637562
+1 INTRODUCTION
+Recently, we have witnessed the rapid development and significant
+impact of Large Language Models (LLMs) [5, 48]. LLMs demonstrate
+amazing power to understand all the users’ input requests (prefill
+stage) and generate accurate responses token-by-token (decode
+
+
+--- PAGE 2 ---
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA Shulin Zeng et al.
+Large
+Language Model
+FPGA
+GPU
+FlightLLM
+Deploy with opt.
+(vLLM, INT8, …)
+Cost
+Price
+(~$12K)
+Power
+(~220W)
+Cost
+Price
+(~$8K)
+Power
+(~45W)
+V100
+(12 nm)
+U280
+(16 nm)
+Performance
+Performance
+~45
+token/s
+~55
+token/s
+1x throughput/price
+1x throughput/power
+1.8x throughput/price
+6.0x throughput/power
+Figure 1: FlightLLM on Alveo U280 FPGA outperforms
+NVIDIA V100S GPU (using vLLM [31] and SmoothQuant [49])
+with better performance and cost efficiency.
+stage). LLMs are being widely used in latency-sensitive scenar-
+ios [36], such as code completion [ 42], real-time chatbots [7, 40],
+customer support [26], online legal advice [12], and beyond. The
+latency is critical for a good user experience, and the batch size
+is usually set as 1 to meet the real-time requirement. However,
+current LLMs suffer from both heavy computation and memory
+overheads because of the explosive growth model size of LLMs.
+Taking GPT-3 [6] as an example, it has 175 billion parameters (i.e.,
+350GB in FP16), requiring about 660TOPS of computation amount
+to complete a single inference.
+Model compression methods [ 13] (e.g., sparsification, quanti-
+zation, etc.) are commonly applied to address the above issues.
+However, the unique computation schemes of these methods are
+not efficiently supported by current hardware platforms, like GPUs,
+for LLMs. From the computation perspective, current GPUs only
+support structured sparsity (e.g., 2:4 sparsity), leading to significant
+algorithm accuracy loss of LLMs [19]. In contrast, the unstructured
+sparsity ensuring algorithm accuracy cannot bring end-to-end ac-
+celeration for LLMs. For example, the 75% unstructured sparsity
+only leads to negligible end-to-end speedup [18]. From the mem-
+ory perspective, quantization and large on-chip memory can re-
+duce data access. Recent algorithm studies [ 14, 28] are pushing
+the limit of bit-width with mixed-precision quantization. How-
+ever, the alignment feature of GPU’s cache and SIMD architecture
+requires homogeneous bit-widths of LLM parameters for weight
+access reduction [49]. Compounding the issue, GPU’s KB-scaled
+share memory of SMs cannot hold all the activations for LLM text
+generation.
+FPGAs are potential solutions to accelerate LLM inference and
+explore the benefits brought by model compression, which has
+been proven in previous deep learning models [21, 22, 39, 43, 55].
+However, efficient LLM inference on FPGAs needs to solve the
+following challenges (Fig. 2):
+• Low computation efficiency. Flexible sparsity patterns
+(e.g., block sparsity [53], N:M sparsity [8], etc.) in LLM leads
+to low computation efficiency.
+• Underutilized memory bandwidth. The decode stage of
+LLM repetitively accesses fine-grained data from off-chip
+memory, leading to underutilized bandwidth (29-43%).
+• Large compilation overheads. The dynamic sparsity pat-
+terns and input lengths of LLMs constitute a large design
+space. For example, generating instructions for 2048 input
+token length results in∼TB storage overhead on FPGAs.
+Always-on-chipdecode&mixed-precisionsupport
+Length adaptivecompilation
+1.Heavy ComputationCompress model with various sparse pattern
+Bandwidth1.9x↑
+On-chipbufferOff-chipmemory
+abcdChallenges for LLMsSolutionsin FlightLLM
+4b4b4b4b8b8b8b8b8b8b8b8b
+ConfigurablesparseDSP chain
+2.Heavy Memory AccessRepetitive activation write to off-chip memory
+3.Dynamic Input LengthEach instruction file for each input length
+Inferencecase
+Largespace!Smallspace!~TB→GB
+HW. infoPerf.
+MACMAC
+MACMACab
+cdMACMAC
+MACMACa
+b
+Efficiency1.6x↑idle
+idle0
+Figure 2: Three challenges of LLM inference on FPGAs, and
+the corresponding solutions in FlightLLM.
+In this paper, we proposeFlightLLM, enabling efficient LLMs in-
+ference with a complete mapping flow on FPGAs (Fig. 1). FlightLLM
+innovatively points out that the computation and memory over-
+head of LLMs can be solved by utilizing FPGA-specific resources
+(e.g., DSP48 and heterogeneous memory hierarchy). To address
+the challenges of low computation efficiency, FlightLLM exploits
+a configurable sparse DSP chain. We introduce a flexible cascaded
+DSP48 architecture to support different sparsity patterns with high
+computation efficiency (i.e., runtime DSP utilization). To tackle the
+underutilized memory bandwidth, FlightLLM proposes an always-
+on-chip decode scheme. Activations reside in the on-chip memory
+during the decode stage with the support of mixed-precision quan-
+tization. To reduce the compilation overhead, FlightLLM proposes
+a length adaptive compilation method. Instructions for consecutive
+input token length are grouped, and the total storage overhead for
+instructions can be reduced.
+The main contributions of this paper are as follows.
+• We propose a configurable sparse DSP chain to support differ-
+ent sparsity patterns. FlightLLM improves the computation
+efficiency by 1.6× with block-wise and N:M sparsity.
+• We propose an always-on-chip decode scheme with mixed-
+precision support. FlightLLM boosts the memory bandwidth
+from 35.6% to 65.9%.
+• We propose a length adaptive compilation method to reduce
+the instruction storage overhead by 500× (∼GB), enabling
+deploying real-world LLMs onto FPGAs.
+We implement FlightLLM on the Xilinx Alveo U280 FPGA. Eval-
+uated on the OPT-6.7B and LLaMA2-7B, FlightLLM achieves better
+end-to-end latency than NVIDIA V100S GPU using vLLM [31] and
+SmoothQuant [49] under the batch size of one. Besides, FlightLLM
+outperforms NVIDIA V100S and A100 GPU with 6.0 × and 4.2×
+higher energy efficiency, and 1.8× and 1.4× better cost efficiency on
+average, respectively. When evaluated on the latest Versal VHK158
+FPGA, FlightLLM beats NVIDIA A100 with 1.2× higher throughput.
+
+--- PAGE 3 ---
+FlightLLM: Efficient Large Language Model Inference with a Complete Mapping Flow on FPGAs FPGA ’24, March 3–5, 2024, Monterey, CA, USA
+Who
+won
+?
+W1 W2A
+(a)
+WQ WvQ
+Multi-head
+Attention
+V
+Wk
+won
+?
+Alex
+O
+FFN
+Who
+won
+?
+Alex
+won
+?
+Alex
+won
+(b)
+Transformer
+Block
+W1 W2
+WQ Wv
+Q
+Wk
+O
+FFNKcache
+Transformer
+Block
+A
+Multi-head
+Attention
+V
+Vcache
+T
+T
+WO
+WO
+Figure 3: The (a) prefill and (b) decode stage of LLMs. Colored
+squares are weights or cached data. Gray denotes activations.
+2 BACKGROUND AND RELATED WORK
+2.1 Background
+Transformer-based LLMs [41, 54] achieve state-of-the-art (SOTA)
+performance across all kinds of Natural Language Processing (NLP)
+tasks. The transformer model architecture consists of many cas-
+caded transformer blocks and each transformer block generally
+includes two types of networks: the Multi-Head Attention (MHA)
+and the Feed Forward Network (FFN).
+Given𝑁 input tokens embedded in 𝐷 dimensional space𝑋∈
+R𝑁×𝐷, the MHA projects the token embedding asℎ heads’ query
+𝑄, key 𝐾 and value𝑉 matrices in Rℎ×𝑁×𝐷 space and performs
+attention operation for each head as shown in equation 1.
+𝑄 =𝑋𝑊𝑄,𝐾 =𝑋𝑊𝐾,𝑉 =𝑋𝑊𝑉 ;𝑂 = softmax(𝑄𝐾𝑇)𝑉 (1)
+where𝑊𝑄,𝑊𝐾 ,𝑊𝑉 represent the weight matrix in MHA.
+The FFN further transforms each token embedding. Given the
+MHA output matrix 𝑂 ∈ Rℎ×𝑁×𝐷, FFN passes it through two
+fully connected layers with a non-linear activation function𝑔 and
+generates the token embedding for the next transformer block.
+𝑋 =𝑔(𝑂𝑊1)𝑊2 (2)
+where,𝑊1,𝑊2 represent the two weight matrix in FFN.
+As shown in Fig. 3, the workflow of LLMs can be divided into
+two main stages: the prefill stage and the decode stage. In the prefill
+stage, LLM takes a prompt from the user which is a sequence of
+tokens as the input (e.g. the " Who won ? " in Figure.3 (a)). Then,
+LLM will understand the context of the prompt and generates the
+first response token (e.g. the "Alex" in Figure.3 (a)). All the𝑁 input
+tokens are processed simultaneously with high throughput. In the
+decode stage, LLM treats the newly generated token as length𝑁 = 1
+input and generates the next token (e.g. the "won" in Figure.3 (b)).
+Since LLM only processes one new token at a time in the decode
+stage, the matrix-matrix multiplications in equation 1 and 2 become
+matrix-vector multiplications. The decode stage is called iteratively
+to generate the response token by token.
+2.2 Related Work
+Efficient Transformer. To tackle the extreme overhead of LLMs,
+various compression techniques are commonly used. Quantiza-
+tion [15, 20, 33, 49, 52] approaches use low-bit integers to substitute
+the 16-bit floating point parameters and activations for inference.
+Computing Core
+Memory 
+Management 
+Unit (MMU)
+Matrix
+Processing
+Engine (MPE)
+Special
+Function
+Unit (SFU)
+Instruction Scheduler
+HBM DDR
+Memory Controller
+Task
+SchedulerCPU
+Figure 4: The overall architecture of FlightLLM, including
+task scheduler, memory controller and computing cores.
+Sparse attention [4, 8, 9, 45, 53] and weight pruning [ 19, 30] ap-
+proaches skip part of the attention matrix or weight matrix comput-
+ing according to the defined sparse pattern. Various sparse patterns
+are proposed for different tasks and transformers, including lo-
+cal diagonal pattern [ 4], block sparse [ 9, 29, 30, 53], N:M sparse
+pattern [8, 19], row-column skipping pattern [ 45], unstructured
+pattern [19] and so on.
+LLM-related Accelerators. Previous work [17, 23–25, 27, 32, 34,
+37, 45, 47] propose customized architecture design for transformer
+models. Some work [17, 24, 32, 34, 44, 45] lay more emphasis on
+accelerating sparse attention. They design specialized architectures
+to fully utilize the pre-defined static attention pattern [17, 32] or
+dynamically generated attention pattern [34, 37, 44, 45]. Recently,
+FACT [37] points out the importance of compressing linear layers
+with mixed-precision quantization to help reduce latency. However,
+these methods cannot accelerate the decode stage of LLMs since
+they mainly focus on the prefill stage for discriminative models,
+like medium-sized BERT [16] model. DFX [25] emphasizes the ac-
+celeration of the decode stage of LLMs. However, it lacks hardware
+support for model compression of LLMs, making it hard to further
+expand model size or maximum token size.
+3 COMPUTING ARCHITECTURE
+3.1 Overall Architecture
+We design a high-performance FPGA-based accelerator for gen-
+erative LLMs by making full use of FPGA resources. Combined
+with compression techniques like sparsification and quantization,
+FlightLLM can effectively accelerate the generative LLMs and re-
+duce the inference overhead. As shown in Fig. 4, the overall hard-
+ware architecture of FlightLLM mainly includes a task scheduler,
+memory controller, and multiple computing cores (short as cores).
+The accelerator uses model parallelism on multiple cores to com-
+plete the LLM inference task. The task scheduler assigns tasks to
+different cores and controls data synchronization.
+The components of each core include the unified Matrix Pro-
+cessing Engine (MPE), Memory Management Unit (MMU), Special
+Function Unit (SFU), and Instruction Scheduler. The instruction
+scheduler decodes the input instructions and schedules different
+hardware units to perform computations. The main functions of the
+remaining hardware units are as follows: MPE handles all matrix
+(i.e., dense and sparse) operations in LLMs. MPE utilizes the config-
+urable sparse DSP chain to reduce the hardware overhead on FPGA.
+MMU reduces memory access overheads by designing customized
+
+--- PAGE 4 ---
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA Shulin Zeng et al.
+Activation Buffer
+Global Buffer
+Weight Buffer
+MPU N-1
+(a) MPE
+MPU 0
+MPU 1 VPU M-1
+…
+VPU 0
+DSP Group 2
+Overflow
+Adjust
+DSP48
+Z Mux
+DSP48
+Reduction
+Node
+DSP Group (DG) 0
+0
+DSP48
+Reduction Node
+Overflow 
+Adjust
+DSP48
+DG K-1
+…
+…
+…
+DG 1
+Sparse MUX
+Sparse
+MUX
+A[0:p-1]
+B[0:p-1]
+mode
+W[0:2k-1]
+(d) VPU
+Matrix Tile
+Matrix 
+Tile
+(b) MM mode
+MUX
+VPU
+(c) MV mode
+MSPLSP
+VPU
+Cascaded DSPs
+Reduction Node
+Cascaded DSPs
+Reduction Node VPU
+VPU
+Cascaded DSPs
+Reduction Node
+Matrix Tile
+Vector Tilea c g
+d e
+h
+b f
+a e
+b f
+c g
+d h
+0 1
+3 3
+0 0
+1 2 e
+f
+g
+h
+a
+b
+c
+d
+1
+3
+0
+2
+0
+3
+0
+1
+A B C D
+E F G H
+A D A B E H E F
+a e
+b f
+c g
+d h
+A B C D
+B D A C F H E G
+MUX
+val idx
+MUX
+Figure 5: The unified Matrix Processing Engine (MPE) can perform multiple types of matrix multiplications. (a) MPE includes
+multiple Matrix Processing Units (MPUs), which are composed of multiple Vector Processing Units (VPUs). By configuring the
+MPU, the MPE can support both (b) matrix-matrix multiplication (MM) mode and (c) matrix-vector multiplication (MV) mode.
+(d) We utilize DSP resources on the FPGA to implement the VPU.
+quantization units for low-bit mixed-precision and optimizing data
+placement for off-chip memory. SFU handles miscellaneous opera-
+tions (e.g., Softmax, etc.) besides matrix processing operations. It
+also provides an additional data path to share data with other SFUs
+in different cores, accelerating the MV operation.
+3.2 Unified Matrix Processing Engine
+Although sparsification can bring huge theoretical benefits to LLM
+inference, they cannot directly achieve these benefits on existing
+architectures. To maximize the benefits of sparsification, we design
+the unified Matrix Processing Engine (MPE) to handle all operations
+related to matrix computation, including General Matrix Multiplica-
+tion (GEMM), Sparse Matrix-Matrix multiplication (SpMM), General
+Matrix-Vector multiplication (GEMV), Sparse Matrix-Vector multi-
+plication (SpMV), and Sampled-Dense-Dense Matrix Multiplication
+(SDDMM). As shown in Fig. 5(a), the MPE includes multiple Matrix
+Processing Units (MPUs), which transfer weights from the weight
+buffer using the streaming approach. The activation buffer and the
+global buffer store the input and output activations of the MPE,
+respectively. By configuring the MPU, the MPE can support both
+matrix-matrix multiplication (MM) (Fig. 5(b)) and matrix-vector
+multiplication (MV) mode (Fig. 5(c)). The MPU is composed of multi-
+ple vector processing units (VPUs). The VPU is the basic component
+in the MPE, which performs the dot product of two vectors.
+We build the unified MPE to support all the five operator on the
+same hardware achitecture. FlightLLM overcomes the challenge of
+low computational efficiency through hardware/software co-design.
+To do this, we first introduce the MPU, which exploits configurable
+sparse DSP chain to reduce hardware overhead while supporting
+sparse reduction. We use the MM mode as an example to illustrate
+the main idea and the implementation of MPU. Then, we re-design
+MPE’s parallel scheme to maximize the performance in the MV
+mode. Finally, we introduce the SDDMM support through simple
+instruction scheduling.
+3.2.1 MPU Design. In transformer-based LLMs, sparsification meth-
+ods including sparse attention and weight pruning are widely used
+to accelerate the LLM inference. The sparse pruning generates
+sparse matrix, whose densities and sparse patterns are uncertain. It
+brings great challenges to hardware design, especially for FPGA-
+based architectures that use the fixed DSP48 as the multiplication
+unit. Existing work introduces large additional hardware architec-
+tures to support sparse computations, which leads to a significant
+increase in hardware resources (about 5× [38]). Without proper
+architectural design, the benefit of sparsification is weakened.
+We utilize the DSP48 engine on FPGA to support sparse oper-
+ations. In order to reduce the hardware overhead, previous work
+cascades the DSPs to take full advantage of the hardware resources
+in DSP48. DSP cascading makes the most use of the accumulator,
+the result carry-out port, and the result carry-in port, improving the
+hard-core utilization. However, the fully cascaded DSP architecture
+are not friendly to sparse computation since the cascaded chain is a
+fixed path. In FlightLLM, we propose a configurable sparse DSP
+chain (CSD-Chain) to supplement the fixed DSP chain. In the
+CSD-Chain, a long DSP chain is divided into several DSP groups.
+A DSP group (DG) has several DSP48 cores, that are cascaded in
+a fixed manner. We pack two INT8 MACs on DSP48 [ 1]. Differ-
+ent DGs are cascaded with a configurable path. A VPU is made
+up of a CSD-Chain and a MPU consists of several VPUs. Fig. 5(d)
+shows the architecture of the CSD-Chain based VPU. Each DG has
+two DSP48 cores. We use configurable cascading to support sparse
+matrix operations by adding three units to the fixed DSP chain.
+Sparse Mux. As shown in Fig. 5(d), two activations (A and B) are
+delivered to one DSP48 core simultaneously for weight reuse. Before
+the delivery, they are sent to a sparse MUX unit. In the sparse MUX
+unit, each activation is selected from multiple inputs according
+to the sparse index (shown in Fig. 5(b)). With this sparse-based
+multiplexer, only nonzero inputs are sent to the DSP48 core.
+Reduction Node (RN) . Compared to GEMM operations, cal-
+culating SpMM may produce more outputs, as demonstrated in
+Fig. 6(b). Thus, DSPs are grouped in our design to implement non-
+breaking MAC and a reduction node are inserted at the end of a
+DG. When a SpMM operation wants to generate multiple outputs,
+the RN will break the configurable cascade path between DGs, and
+calculate the output. Other DGs on the CSD-Chain will start a new
+SpMM computation by selecting zero in the Z-MUX.
+Overflow Adjust Unit (OAU). When a DSP48 shares a weight
+with two activations, only 18 bits can be accessed for each activation.
+
+--- PAGE 5 ---
+FlightLLM: Efficient Large Language Model Inference with a Complete Mapping Flow on FPGAs FPGA ’24, March 3–5, 2024, Monterey, CA, USA
+DG
+DSP48
+DSP48
+DG
+DSP48
+DSP48
+DG
+DSP48
+DSP48
+× =
+(a) Dense case (b) Sparse case
+× =
+DG
+0
+DSP48
+0 0 0
+DSP48
+A B C D
+E F G H
+a
+b
+c
+d
+a c
+d
+b
+A B C D
+E F G H
+A
+E
+B
+F
+C
+G
+D
+H
+A
+E
+D
+H
+A
+E
+B
+F
+a b c d a b c d
+Figure 6: By configuring the VPU, the MPE can support both
+(a) dense and (b) sparse cases.
+As a result, a long cascade accumulation may overflow. Therefore,
+we adjust the output data before sending it to the next DG. In the
+overflow adjust unit, the result is split into a most significant part
+(MSP) and a least significant part (LSP). The LSP cascades to the
+next DSP48 with limited bits to avoid accumulation overflow. The
+MSP are delivered to the RN in the next DG to calibrate the output
+result. In this way, all accumulators in DSP48 are fully utilized.
+Since a 18-bit integer will never overflow if no more than eight
+16-bit integer are accumulated, the OAU is skipped with no more
+than eight DSP48 cores.
+Due to the configurable cascade path, VPU with the CSD-Chain
+can efficiently work on both dense and sparse multiplications. As
+shown in Fig. 6, all DSP48 cores are fully used in both cases. The only
+difference is that the RN in sparse case will break the CSD-Chain
+into two individual DSP chains to execute two different MACs and
+produce two outputs.
+Supporting sparse matrix multiplication could improve the com-
+putation efficiency. But arbitrary sparsity may cause data mismatch
+between different DGs, leading to unexpected efficiency decrease.
+Existing work shows that N:M sparse pattern is a promising sparsi-
+fication method. It maintains the same sparsity ratio within each
+matrix block, and allocates different sparsity ratios among differ-
+ent matrix blocks. Where M is an integer power of 2, and N is the
+partial factor of M. For example, M=16, N=0, 2, 4, 8, 16. The N:M
+sparse method restricts the number and position of nonzero ele-
+ments while maintaining flexible sparsity. It can be easily mapped
+to a CSD-Chain. For a N:M sparse architecture, a CSD-Chain can
+be splited into N groups. Each DSP will select one input from M
+inputs. In each cycle, the entire CSD-Chain can produce one MAC
+output in dense case and N MAC outputs in N:M sparse case. Fig. 6
+shows the case of a VPU supporting 2:4 sparse pattern.
+3.2.2 Matrix-Vector Multiplication Analysis. We explore the hyper-
+parameter space of compute tiling to fully utilize the off-chip mem-
+ory bandwidth. We model the memory access time𝑇𝑚𝑒𝑚 and com-
+puting time𝑇𝑐𝑚𝑝 of general MM in equation 3.𝑀×𝐾,𝐾×𝑁 , and
+𝑀×𝑁 denote the shapes of two input matrices and one output
+matrix, respectively.𝑝𝑀,𝑝𝐾 , and𝑝𝑁 denote the three dimensions
+of computational parallelism in matrix computation.𝐵𝑊 denotes
+the off-chip bandwidth.
+Output Queue
+Input Queue
+Inst. Ctrl
+DMA Ctrl
+Ctrl
+Param Loader Micro-Op
+Controller
+Remote
+SFU Access
+Inst. Queue
+Element-wise
+Processing
+Unit
+Reduction
+Unit Param 
+Reg
+Inst. 
+Scheduler
+Global
+Buffer
+SFU
+MISC ALU
+Figure 7: SFU contains a MISC ALU, an instruction controller,
+a micro-operator controller, and a remote SFU access engine.
+𝑇𝑚𝑒𝑚 = 𝑀·𝐾+𝐾·𝑁+𝑀·𝑁
+𝐵𝑊
+𝑇𝑐𝑚𝑝 = 𝑀·𝐾·𝑁
+𝑝𝑀·𝑝𝐾·𝑝𝑁
+(3)
+To overlap the computation and memory access with double-
+buffer, we need to make sure that𝑇𝑚𝑒𝑚 <𝑇𝑐𝑚𝑝 . For MV operations,
+𝑀 = 1 and 𝑝𝑀 = 1 are set. For the MV mode, we can iterate
+through the space to obtain a set of [𝑝′
+𝐾,𝑝′
+𝑁] to guarantee the
+bound for double-buffer. In other words, under the configuration
+of [𝑝′
+𝐾 ,𝑝′
+𝑁 ], we can realize that the MPE can still fully utilize the
+off-chip memory bandwidth in MV mode, although the computing
+resources in the MPE are partially idle at this time (Fig. 5(c)). By
+redesigning the computational parallelism, MPUs can maximize the
+execution performance of executing GEMV and SpMV on FPGAs.
+3.2.3 SDDMM Support. SDDMM is the key operator of the sparse
+self-attention layer. The block-wise sparsity of SDDMM can be
+used to reduce the amount of computation and improve the hard-
+ware energy efficiency. Therefore, we can treat SDDMM as multiple
+GEMMs in a block-wise manner. We only need to do some pro-
+cessing on the SDDMM operator with the instruction scheduler to
+efficiently complete the SDDMM computation on the MPE.
+3.3 Special Function Unit
+Besides MM and MV computations, there are many other opera-
+tions in LLMs, including softmax, layer normalization, etc. These
+miscellaneous (MISC) operations can be classified into two types:
+(a) Element-wise operation, which generates the result element by
+element (such as element-add and concat); (b) Two-phase operation,
+which will perform a reduction operation to get one or more param-
+eters before the element-wise operation (such as softmax and layer
+normalization). Unlike MM and MV operations, these operations
+are not compute-intensive. Thus, we design a Special Function Unit
+(SFU) to handle all MISC operators, as shown in Fig. 7. The SFU
+splits a MISC instruction into micro-operations, and delivers each
+micro-op to the ALU. The ALU will calculate the output accord-
+ing to the micro-op. All the input data is fetched from the MMU.
+For two-phase operations, the SFU will read an entire vector data
+from MMU to generate necessary parameters and read the same
+data again calculating the final output. For accuracy consideration,
+softmax and layer normalization operations are calculated in fp16
+since the hardware cost of SFU is acceptable.
+Hiding the computation latency of MISC operations is important
+to improve the end-to-end latency in LLMs. For MM and multi-head
+MV operations, MISC calculations can be hidden between different
+vectors. For MISC operations after single-head MV calculations, the
+SFU breaks the entire vector into several sub-vectors and performs

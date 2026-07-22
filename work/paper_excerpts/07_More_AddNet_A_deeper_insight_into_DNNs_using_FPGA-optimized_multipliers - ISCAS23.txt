@@ -1,0 +1,607 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\More_AddNet_A_deeper_insight_into_DNNs_using_FPGA-optimized_multipliers - ISCAS23.pdf
+PAGES: 5
+--- PAGE 1 ---
+More AddNet: A deeper insight into DNNs using
+FPGA-optimized multipliers
+Martin Hardieck∗1, Tobias Habermann†1, Fabian Wagner∗, Michael Mecik†, Martin Kumm†, Peter Zipf∗
+∗University of Kassel, Germany, {martin.hardieck, fabian.wagner, zipf}@uni-kassel.de,
+†Fulda University of Applied Science, Fulda, Germany, {tobias.habermann, michael.mecik, martin.kumm}@cs.hs-fulda.de
+Abstract—We present a training tool ﬂow for deep neural
+networks (DNN) optimized for a hardware-efﬁcient FPGA-
+implementation based on reconﬁgurable constant-coefﬁcient
+multipliers (RCCMs). RCCMs replace the costly generic
+multipliers by shift-and-add operations. In previous work, it
+was shown that RCCMs offer a better alternative for saving
+FPGA area than utilizing low-precision arithmetic. This work
+proposes an improved tool ﬂow that enables layer-wise weight
+quantization, a larger search space by additional RCCM
+coefﬁcient sets and an optimized retraining. This leads to
+an improved accuracy compared to the previous method. In
+addition, hardware requirements are lower as only 1 to 3
+adders per multiplication are used. This reduces the overall
+complexity and the required memory bandwidth simultaneously.
+We evaluate our tool ﬂow using multiple networks (ResNets) on
+the ImageNet data set.
+Index Terms—FPGA, Neural Network Accelerator, Arithmetic,
+Neural Network Training, Tool ﬂow, Fixed-Point, Low-Precision
+I. I NTRODUCTION
+Deep Neural Networks (DNNs) are increasingly important
+for many application areas from embedded systems [1] to
+data centers [2]. Thus, their area and energy efﬁcient imple-
+mentation is becoming a major concern [3]. In this context,
+ﬁeld-programmable gate array (FPGA) implementations have
+shown the capability to outperform CPU or GPU based
+inference [4], [5]. FPGAs offer the ability to adapt arithmetic
+implementations to characteristics of a speciﬁc DNN, but this
+regularly requires a parameter quantization to reduce area
+demands. Thus, they increase efﬁciency at the price of a
+largely increased design effort [4].
+AddNet [6] investigates the application of reconﬁgurable
+constant-coefﬁcient multipliers (RCCMs) to replace generic,
+low-precision multiplications in FPGA-based DNN imple-
+mentations. RCCMs are a special type of time-multiplexed
+Multiple Constant Multipliers (MCM [7]), which allow for
+runtime switching between weights in an efﬁcient way. As
+they only use adders, subtractors, bit shifts and multiplexers,
+they are less costly than generic multiplications, even for
+low-precision arithmetic [6]. Additionally, due to the speciﬁc
+encoding scheme for possible coefﬁcient values, a reduction
+in weights storage can be achieved.
+A speciﬁc training scheme is required to adapt RCCM selec-
+tion and the DNN’s coefﬁcient values distribution by mapping
+1These authors contributed equally to this work.
+RCCM coefﬁcient representations to the DNN’s weights distri-
+bution, thus minimizing quantization loss. This sets the ground
+for the principal approach to reduce the mismatch between
+DNN computations and FPGA device architecture by replacing
+low-precision arithmetic by more suitable RCCMs. The idea
+in AddNet is to use a two-step training procedure, starting
+with an already trained network represented by ﬂoating-point
+values as the input. In the ﬁrst step, a ﬁxed-point training
+is used to quantize the input network. In the second step,
+the quantized version is retrained to adapt its weights to the
+speciﬁc values provided by RCCMs. The RCCMs with their
+resulting values are selected based on the weight distribution
+of the quantization-aware training (QAT). Furthermore, all
+AddNet RCCMs are based on a symmetric value distribution
+around zero and also have a ﬁxed structure.
+Previous work [6] already demonstrates that this kind of
+device architecture adaptation leads to better implementations
+in terms of area savings. In this paper, we improve this
+approach by considering the absolute quantization error when
+adapting the RCCMs and, in contrast to AddNet, quantization
+and selection of RCCM coefﬁcients are applied on a per-layer
+basis. Also, a larger variety of RCCMs is provided and the
+training, as well as the accuracy evaluation, are improved. The
+main contributions of this paper are:
+• the extension of the reachable search space by the intro-
+duction of additional connection structures for RCCMs in
+combination with a larger set of used operations (Sec. III),
+• an adapted training for improved layer-wise ﬁxed-point
+range scaling and a focus on only the signiﬁcant weights
+for word size considerations (Sec. II),
+• an improved and automated RCCM selection for the
+quantization-aware training cycle (Sec. IV),
+• a modiﬁed accuracy metric to address quantization related
+ambiguities (Sec. II-B).
+II. Q UANTIZATION AWARE TRAINING WITH MQUAT
+Several frameworks exist that allow QAT, e.g., [8]–[10].
+Even small variations in the training process can lead to very
+different results concerning actual weights or overall accuracy
+of the quantized network. They can even lead to instabilities
+of the results, including complete accuracy deterioration. As
+our approach capitalizes on quantization using speciﬁc weight
+distributions while retaining accuracy, these observations are
+of paramount interest here.
+2023 IEEE International Symposium on Circuits and Systems (ISCAS) | 978-1-6654-5109-3/23/$31.00 ©2023 IEEE | DOI: 10.1109/ISCAS46773.2023.10181827
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:34 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 2 ---
+We reﬁned the open-source Modular Quantization Aware
+Training (MQUAT) framework1 for this work as described
+below. MQUAT is an extension of the TensorFlow 2 framework
+and uses an interface structure similar to Keras. MQUAT
+allows to optionally quantize activations, weight-values, bias-
+values, summations in the matrix multiplications and layer out-
+puts separately. A speciﬁed quantization only applies during
+inference; the weights are still saved as ﬂoating-point values
+and can therefore slowly drift during backpropagation, follow-
+ing the concept of a straight-through estimator (STE) [11].
+However, we suppress gradients that would result in values
+outside the speciﬁed quantization range.
+The training tool ﬂow used here performs a layer-based
+ﬁxed-point quantization followed by a matching of RCCM co-
+efﬁcient sets to the weight value distributions of the quantized
+network layers. This approach results in a tight architecture
+adaptation of the arithmetic.
+A. Adaptation of the Quantization to the Value Distribution
+Quantization of the ﬂoating-point weights is done by a
+stepwise reduction of the word size available for the values
+accompanied by retraining the network, thus slowly adapting
+the quantization values to the original values. This is nec-
+essary as directly using the target word size usually leads
+to bad accuracy results. By clipping outliers, only the most
+relevant range is considered for quantization [12], [13]. This
+is implemented in MQUAT by ignoring all outliers that are
+larger than a user-deﬁned factor of the standard deviation, thus
+reducing the value range of the input ﬂoating-point numbers
+and enabling a better ﬁt of the ﬁxed-point representations.
+To match the ﬁxed-point range to the distribution of a
+clipped ﬂoating-point value set W , a layer-wise scaling is
+performed, based on the value-distributions of the occurring
+weights WW , biases WB, and activations WA. While the
+values of WW and WB are embedded in the trained network,
+we determine the activations WA using data from the ﬁrst
+calculated inferences. These values are used for scaling the
+weights, biases, and activations individually:
+We calculate the position of the binary point such that the
+resulting ﬁxed-point value range is minimal and just includes
+the largest and smallest occurring ﬂoating-point values.
+Then, we try to move this binary point position one bit
+to the left, i.e., moving one additional digit from the integer
+part to the fraction part. This means that the largest value
+in W now is outside the integer range. We only keep this
+new position if the resulting distance between the largest and
+smallest ﬁxed-point and ﬂoating-point values is not too large.
+In our experiments, an empirically selected maximum distance
+of 5% worked reasonably well.
+This addresses the cases where the scaling factor represent-
+ing the binary point position shift was almost one position
+less; the extended fraction range then delivers a more accurate
+resolution to match the weight values in W .
+Due to the asymmetry of the two’s complement represen-
+tation, the consideration must be carried out separately for
+1MQUAT: www.uni-kassel.de/go/mquat
+cat dog cow fox bat
+cat dog cow fox bat
+cat dog cow fox bat
+A
+B
+cat dog cow fox bat
+top-1
+top-3
+Sort.
+A
+B
+top-1
+top-3
+Sort.
+A
+B
+1
+0
+⅓
+⅔
+Floating-point
+catdog cowfox bat catdog cowfox bat
+1
+0
+⅓
+⅔
+2-bit quantization
+Fig. 1. Example for quantizing a prediction vector of a classiﬁer: ﬂoating-
+point values (left), two bit quantization (right). The respective maximum
+evaluation is highlighted in green. Sorting result for top- k acc. evaluation
+from two different (A and B) sorting options.
+the positive and negative ﬁxed-point bounds and the largest
+resulting range extension must be used.
+B. Accuracy Metric for Low Word Sizes
+The general approach for a classiﬁer to determine a top-
+k metric from a prediction vector is to take the numerically
+highest k class predictions and check if the correct class is
+present as shown in Fig. 1 (left). As shown on the right side
+of Fig. 1, quantization to low word sizes notoriously results
+in tie situations, which must be resolved.
+We solved this by deﬁning N> as the number of prediction
+values greater than the prediction value for the correct class,
+and N≥ as the number of prediction values greater than or
+equal to the prediction value for the correct class. For example,
+in Fig. 1, N> = 2 and N≥ = 4, if cat was the correct class.
+If N > is larger or equal to k, the top- k accuracy metric is
+0, because neither the correct class nor other classes with the
+same prediction value are in the top- k. Otherwise, we have
+the tie case in which the conventional top-1 accuracy depends
+on the sorting of the outputs. Hence, we deﬁne the metric
+to be equal to max (k/N≥, 1) to be independent of the actual
+sorting. For example, the top-1 accuracy in Fig. 1 leads to 1
+2
+instead of a random 0 or 1 result. With this, ambiguous cases
+are penalized during training.
+III. S EARCH SPACE AND RCCM C OMPOSITION
+In AddNet [6], the RCCM connection structures (CS) as
+shown in Fig. 2 were ﬁlled with pre-deﬁned base cell (BC)
+combinations. We extend the search space by a larger operation
+set for the base cells and integrate the BC selection for each
+placeholder of the RCCM structure into the training process.
+A. Low-level Implementation
+The RCCM BCs used in this work are shown in Fig. 3.
+The data path structures are designed to use the same FPGA
+resources as one standard ripple carry adder. For each of the
+cases A, B, and C all data path options are shown. Using the
+select lines s, the data path for the adder can be controlled
+via the multiplexers. The combined select lines of the BCs
+become the select lines of the RCCM. The mapping from s to
+a speciﬁc data path conﬁguration for a speciﬁc BC is deﬁned
+by a selection function σ(s), which is shown as a function
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:34 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 3 ---
+4-Add1-Add 2-Add 3-Add
+X
+Y
+A B
+s0 s1
+Y
+base cell
+A B
+s2 s3
+Y
+X
+Y
+A B
+s0 s1
+Y
+base cell
+base cell
+X
+A B
+s4 s5
+Y
+A B
+s2 s3
+Y
+Y
+A B
+s0 s1
+Y
+base cell base cell
+base cell
+A B
+s2 s3
+Y
+A B
+s4 s5
+Y
+X
+A B
+s0 s1
+Y
+A B
+s6 s7
+Y
+Y
+base cell base cell
+base cell
+base cell
+Fig. 2. RCCM connection structures 1-Add up to 4-Add. Each base cell is
+shown as one box with the data inputs A and B and the select lines s i. Input
+value of each RCCM is X and the output of each RCCM is Y
+σ(s)
+s0 s1
+11
+cin +
+0 1 2 3 4 5 6
+0A1 A2 A3
+φ11 φ12 φ13
+1
+φ14
+A
+A B
+Y
+0 1 2 3 4
+0A1 A2
+0 1 2
+0B1
+σ(s)
+φ22
+s0
+11
+cin +
+1
+A
+φ21 φ23
+B
+Y
+B
+s1
+0 1 2 3
+0A 0B
+σ(s)
+s0
+11
+cin +
+1
+A
+φ31 φ32
+B
+Y
+C
+s1
+0 1 2 3
+A B
+Fig. 3. Low-level base cell implementations: A, B from [6], C is a new
+structure. The gray boxes can be implemented in LUT resources, the parts
+outside the boxes in the routing network.
+block in each BC. However, for an implementation, each BC
+uses two bits of s and σ(s) is chosen and ﬁxed to just four
+combinations of the multiplexers. During runtime, it is possible
+to switch between these four cases using s [6].
+Each BC implementation is geared to utilize low-level
+features of the target FPGA architecture to the greatest pos-
+sible extent. However, while cells A and B were designed to
+address the Xilinx Virtex [14] architecture, cell B can also be
+implemented on Intel FPGAs. BC C is introduced to address
+the speciﬁc device architecture of the Xilinx Versal [15] slices
+and shows that an RCCM implementation is possible. The
+considered CS are presented in Fig. 2 and are independent
+of any target device. Here, 1-Add is newly introduced as
+it was not possible to handle 1-Add using the selection
+procedure of [6]. The 4-ADD has been removed as the 3-
+ADD already reaches a sufﬁciently good accuracy with the
+proposed approach.
+To support all possible RCCM conﬁgurations, we designed
+a generic open-source code generator based on FloPoCo [16],
+while AddNet code generation only enabled the speciﬁc
+RCCM structures used there.
+B. RCCM Search Space
+To specify a set of coefﬁcients, the placeholders of an
+RCCM CS are individually ﬁlled with BCs, which in turn
+are speciﬁed by their type, shifts, and a chosen σ(s). The
+RCCM search space consists of literally trillions of different
+possibilities. So, restrictions are necessary to create a usable
+subset for RCCM selection.
+These restrictions split into three categories: available op-
+eration combinations for σ(s), usable BC types at speciﬁc
+TABLE I
+OVERVIEW OF RCCM SEARCH SPACE WITH USED RESTRICTIONS FOR
+1-A DD, 2-A DD AND 3-A DD, OCCURRING CONFIG CASES AND RESULTING
+UNIQUE COEFFICIENT SET COUNTS
+Type σ(s) Pos. 1 Pos. 2 Pos. 3 Smax cases unique
+1-Add all A/B - - 8 275,130 97,727
+2-Add reduced A/B A/B - 6 1,270,129 832,585
+3-Add reduced A A B 4 2,000,000 1,163,742
+positions in the CS, and the allowed maximal shift Smax for
+the shifts ϕxy of each BC.
+The used restrictions for all RCCM Types are shown in
+Table I together with the count of occurring conﬁgurations
+(cases) and the resulting unique coefﬁcient sets to choose from.
+Forσ(s), a reduced set results in less options to choose from
+which depends on the used BC. For type A, a reducedσ results
+in four sets. All of them contain {A1+B1; A2+B1; A3+B1}
+and differ in{B1−A1}{B1−A1}{B1−A1}{B1}. For type B,
+a reduced σ results in one set: {A1−B1; B1−A1; A2−B1;
+B1−A2}
+Which BC is allowed to be used at which position in the CS
+is deﬁned in columns three to ﬁve of Table I. As mentioned
+before, not all BC types can be implemented on each FPGA
+architecture and therefore the target platforms inﬂuence the
+possible search space. In this paper, we focus on Virtex FPGAs
+and as type C is inefﬁcient for Virtex, it is not used here.
+The extended search space enables more possible coefﬁcient
+sets, which are no longer restricted to symmetric distributions.
+IV. RCCM- AWARE TRAINING
+To use an RCCM for a speciﬁc computation, its coefﬁcient
+set must be selected out of the numerous cases given in Table I.
+The idea behind this selection is similar to that for scaling
+regularly quantized ﬁxed-point numbers: Based on the clipped
+value set of the ﬂoating-point weight values W , an RCCM
+providing a suitable weights distribution must be found. As
+the implemented weights of an RCCM depend on the selected
+coefﬁcient set, the best-ﬁtting coefﬁcient set must be deter-
+mined. As usually, batch normalization [17] computation is
+used, which cannot be directly implemented by RCCMs. We
+already fuse batch normalization effects before quantization
+into the weights and, subsequently, RCCM selection.
+The search space can be seen as a set K containing all
+representable coefﬁcient sets for a given RCCM architecture.
+The goal is to ﬁnd the coefﬁcient set K∈K which results
+in the smallest possible quantization error when used to
+reassemble W . To compare a coefﬁcient set K with W , the
+sum of absolute quantization errors is given as
+δK =
+∑
+w∈W
+min
+k∈K
+(|w−k|) . (1)
+Similar to Sec. II-A, we compute a layer-wise bit shift for
+scaling the coefﬁcient sets inK toW . In contrast to the ﬁxed-
+point scaling, for RCCMs we only take the largest absolute
+values kmax = max
+k∈K
+(|k|) and wmax = max
+w∈W
+(|w|) of both sets
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:34 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 4 ---
+TABLE II
+STANDARD DEVIATION FACTORS USED FOR CLIPPING IN EXPERIMENTS .
+HERE , W, B, A STANDS FOR QUANTIZATION OF WEIGHTS , BIASES , AND
+ACTIVATIONS , RESPECTIVELY
+Fixed-point RCCM
+ResNet-50 6-Bit 7-Bit 8-Bit 9-Bit 10-Bit 1-Add 2-Add 3-Add
+w,b 3.25 4.0 4.0 7.0 10.0 2.5 5.5 8.0
+w,b,a 3.25 4.0 4.0 7.0 10.0 2.5 5.5 8.0
+ResNet-18 6-Bit 7-Bit 8-Bit 9-Bit 10-Bit 1-Add 2-Add 3-Add
+w,b 3.0 7.0 7.0 7.0 10.0 2.5 5.5 8.0
+w,b,a 3.25 3.25 4.0 6.0 9.0 2.5 5.5 8.0
+into account for determining the scaling factor wmax/kmax and,
+from there, the according bit shift as r =⌊log2(wmax/kmax)⌋.
+By using bit shifts r, each K∈K can be correctly scaled to
+2rK, denoting the element-wise multiplication of K with 2r.
+Typically, the scaling factor will not be a power of 2 and
+in that case, in addition to evaluating metric δ2rK according
+to (1), we also evaluate δ2r+1K. Finally, we use the shift value
+(r orr+1) resulting in the lowerδK for RCCM scaling. Then,
+the network is retrained with the selected and scaled RCCMs.
+V. E XPERIMENTAL RESULTS
+We performed training experiments to evaluate our ap-
+proach. We do not present new synthesis results, as the
+generated hardware differs from [6] only by the omission of
+scaling multipliers which are not needed anymore.
+We use the pretrained full-precision weights and augmenta-
+tion settings from [18]. We retrained ResNet models [19] on
+the ImageNet 2012 dataset [20] with our QAT method. All
+experiments use the standard SGD optimizer (lr= 10−5, mo-
+mentum=0.94, nesterov=True) and categorical-cross-entropy
+loss. The outlier clipping settings for all experiments are
+shown in Table II. All clipping settings are determined by
+validating the accuracy of the PTQ of each model.
+To evaluate the inﬂuence of quantized activations, we
+present the resulting accuracy for a ﬁxed-point only training
+in Table III and the results for quantizing the biases and the
+activations with ﬁxed-point and the weights with a 2-Add
+RCCM are shown in Table IV. For this approach, an activation
+word size between 6 and 8 bits is sufﬁcient. Larger word sizes
+have not shown any improvement.
+Table V shows our main results compared with the state of
+the art. Here, only the weights and biases are quantized similar
+to [6]. Note that the ﬂoating-point accuracy has advanced a
+lot since [6]. Hence, to enable a fair comparison despite the
+differences in the baseline accuracy, we compare the relative
+top-1 accuracy (rel.) to the corresponding baseline and mark
+the superior values bold. It can be seen that the proposed
+method results in a signiﬁcantly lower accuracy drop. This
+allows the usage of 3-Add instead of 4-Add as before, which
+saves hardware resources and reduces the memory bandwidth
+by 25%. It should also be noticed that it is more complex
+to perform non-destructive retraining of networks with high
+accuracy compared to low accuracy.
+TABLE III
+ACCURACY RESULTS (%) FOR MODELS WITH DIFFERENT FIXED -POINT
+ACTIVATION AND WEIGHT WORD SIZES
+Model 6-Bit 8-Bit 10-Bit ﬂoat
+ResNet-18 Top-1 70.7 72.4 72.8 73.2
+ResNet-18 Top-5 89.5 90.7 91.1 91.3
+ResNet-50 Top-1 76.9 77.1 77.4 77.8
+ResNet-50 Top-5 93.3 93.4 93.6 93.8
+TABLE IV
+ACCURACY RESULTS (%) FOR RESNET-18 WITH 2-A DD WEIGHT
+QUANTIZATION AND MULTIPLE FIXED -POINT ACTIVATION WORD SIZES
+Acc. 2-Bit 4-Bit 6-Bit 8-Bit 10-Bit 12-Bit ﬂoat
+Top-1 0.1 65.1 70.3 70.6 70.7 70.7 73.2
+Top-5 0.5 86.2 89.7 89.8 89.8 89.8 91.3
+TABLE V
+ACCURACY RESULTS FOR DIFFERENT QUANTIZATION SCHEMES IN
+COMPARISON WITH ADDNET [6] FOR RESNET-18 AND RESNET-50 AND
+MEMORY BANDWIDTH REDUCTIONS COMPARED TO 8 BIT (M EM.) [%]
+ResNet-18 ResNet-50
+AddNet [6] Proposed AddNet [6] Proposed
+Top-1 rel. Top-1 rel. Mem. Top-1 rel. Top-1 rel. Mem.
+ﬂoat 68.6 100.0 73.2 100.0 - 76.0 100.0 77.8 100.0 -
+8 bit 66.0 96.2 72.7 99.3 0.0 72.5 95.4 77.4 99.5 0.0
+6 bit 63.5 92.6 71.7 98.0 25.0 69.6 91.6 75.7 97.3 25.0
+4-Add 66.4 96.8 - - 0.0 73.3 96.4 - - 0.0
+3-Add 66.0 96.2 72.0 98.4 25.0 72.7 95.7 77.1 99.1 25.0
+2-Add 65.1 94.9 71.0 97.0 50.0 72.1 94.9 76.4 98.2 49.9
+1-Add - - 61.9 84.6 75.0 - - 68.1 87.5 74.9
+VI. C ONCLUSION
+We present a tool ﬂow for automatic layer-wise
+quantization-aware training (QAT) of DNNs for FPGAs with
+an adapted metric. The main achievement is a closer matching
+between DNN computations and FPGA device architecture by
+using RCCMs avoiding low-bitwidth arithmetic. Our approach
+combines the optimized layer-wise RCCM selection with an
+adapted retraining, thus matching a speciﬁc weight distribution
+resulting from our adapted QAT to the FPGA-speciﬁc RCCM
+implementations. To mitigate penalties introduced by RCCM
+restrictions, we extend the RCCM search space by number
+with asymmetric coefﬁcient sets. The improved QAT algorithm
+with an extended search space outperforms previous RCCM
+concepts and maintains almost ﬂoating-point accuracy just
+using 3-Add RCCMs. This comes with a signiﬁcant memory
+bandwidth reduction which can be raised up to 75% with 1-
+Add RCCMs, however with substantial accuracy losses.
+Further advancements might be possible by including a LUT
+metric into the RCCM selection and to allow different RCCM
+types on a per-layer basis with a new selection process.
+Acknowledgement: This research was supported by
+NVIDIA’s academic hardware grant program as well as by the
+German Federal Ministry for Digital and Transport (BMDV)
+as part of the Campus FreeCity project.
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:34 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 5 ---
+REFERENCES
+[1] T. Qiu, J. Chi, X. Zhou, Z. Ning, M. Atiquzzaman, and D. O. Wu, “Edge
+Computing in Industrial Internet of Things: Architecture, Advances and
+Challenges,” IEEE Communications Surveys & Tutorials, vol. 22, no. 4,
+pp. 2462–2488, 2020.
+[2] A. M. Caulﬁeld, E. S. Chung, A. Putnam, H. Angepat, D. Firestone,
+J. Fowers, M. Haselman, S. Heil, M. Humphrey, P. Kaur, J.-Y . Kim,
+D. Lo, T. Massengill, K. Ovtcharov, M. Papamichael, L. Woods,
+S. Lanka, D. Chiou, and D. Burger, “Conﬁgurable Clouds,” IEEE Micro,
+vol. 37, no. 3, pp. 52–61, 2017.
+[3] K. O’Neal and P. Brisk, “Predictive Modeling for CPU, GPU, and
+FPGA Performance and Power Consumption: A Survey,” in 2018 IEEE
+Computer Society Annual Symposium on VLSI (ISVLSI) , Jul. 2018, pp.
+763–768, iSSN: 2159-3477.
+[4] S. Bavikadi, A. Dhavlle, A. Ganguly, A. Haridass, H. Hendy, C. Merkel,
+V . J. Reddi, P. R. Sutradhar, A. Joseph, and S. M. P. Dinakarrao, “A
+Survey on Machine Learning Accelerators and Evolutionary Hardware
+Platforms,” IEEE Design Test, pp. 1–1, 2022.
+[5] E. Nurvitadhi, S. Subhaschandra, G. Boudoukh, G. Venkatesh, J. Sim,
+D. Marr, R. Huang, J. Ong Gee Hock, Y . T. Liew, K. Srivatsan, and
+D. Moss, “Can FPGAs Beat GPUs in Accelerating Next-Generation
+Deep Neural Networks?” in Proceedings of the 2017 ACM/SIGDA
+International Symposium on Field-Programmable Gate Arrays - FPGA
+’17. Monterey, California, USA: ACM Press, 2017, pp. 5–14.
+[6] Julian Faraone, Martin Kumm, Martin Hardieck, Peter Zipf, Xueyuan
+Liu, David Boland, and Philip H. W. Leong, “AddNet: Deep Neural
+Networks Using FPGA-Optimized Multipliers,” IEEE Transactions on
+Very Large Scale Integration (VLSI) Systems , pp. 1–14, 2019.
+[7] P. Tummeltshammer, J. C. Hoe, and M. P ¨uschel, “Time-Multiplexed
+Multiple-Constant Multiplication,” IEEE Transactions on Computer-
+Aided Design of Integrated Circuits and Systems , vol. 26, no. 9, pp.
+1551–1563, Sep. 2007.
+[8] A. Pappalardo, “Xilinx/brevitas,” 2021. [Online]. Available:
+https://doi.org/10.5281/zenodo.3333552
+[9] D. M. Loroch, F.-J. Pfreundt, N. Wehn, and J. Keuper, “TensorQuant:
+A Simulation Toolbox for Deep Neural Network Quantization,” in
+Proceedings of the Machine Learning on HPC Environments , ser.
+MLHPC’17, Nov. 2017, pp. 1–8.
+[10] A. Paszke, S. Gross, F. Massa, A. Lerer, J. Bradbury, G. Chanan,
+T. Killeen, Z. Lin, N. Gimelshein, L. Antiga, A. Desmaison, A. K ¨opf,
+E. Yang, Z. DeVito, M. Raison, A. Tejani, S. Chilamkurthy, B. Steiner,
+L. Fang, J. Bai, and S. Chintala, “PyTorch: an imperative style, high-
+performance deep learning library,” in Proceedings of the 33rd Inter-
+national Conference on Neural Information Processing Systems , Dec.
+2019, no. 721, pp. 8026–8037.
+[11] Y . Bengio, N. L ´eonard, and A. C. Courville, “Estimating or
+propagating gradients through stochastic neurons for conditional
+computation,” CoRR, vol. abs/1308.3432, 2013. [Online]. Available:
+http://arxiv.org/abs/1308.3432
+[12] J. L. McKinstry, S. K. Esser, R. Appuswamy, D. Bablani, J. V . Arthur,
+I. B. Yildiz, and D. S. Modha, “Discovering Low-Precision Networks
+Close to Full-Precision Networks for Efﬁcient Inference,” in 2019
+Fifth Workshop on Energy Efﬁcient Machine Learning and Cognitive
+Computing - NeurIPS Edition (EMC2-NIPS) , Dec. 2019, pp. 6–9.
+[13] A. Gholami, S. Kim, Z. Dong, Z. Yao, M. W. Mahoney, and K. Keutzer,
+“A Survey of Quantization Methods for Efﬁcient Neural Network
+Inference,” CoRR, vol. abs/2103.13630, 2021, arXiv: 2103.13630.
+[Online]. Available: https://arxiv.org/abs/2103.13630
+[14] 7 Series FPGAs Conﬁgurable Logic Block User Guide (UG474) ,
+Xilinx, 2016. [Online]. Available: https://docs.xilinx.com/v/u/en-
+US/ug474 7Series CLB
+[15] G. Brian, G. Dinesh, R. Chirag, and B. Trevor, “Xilinx adaptive
+compute acceleration platform: Versal architecture,” in Proceedings of
+the ACM/SIGDA International Symposium on Field-programmable Gate
+Arrays, 2019, pp. 84–93.
+[16] F. de Dinechin and B. Pasca, “Designing Custom Arithmetic Data Paths
+with FloPoCo,” IEEE Design Test of Computers , vol. 28, no. 4, pp.
+18–27, Jul. 2011.
+[17] S. Ioffe and C. Szegedy, “Batch normalization: Accelerating deep
+network training by reducing internal covariate shift,” in International
+conference on machine learning . PMLR, 2015, pp. 448–456.
+[18] O. S ´emery, “Deep learning networks,” Oct. 2022, GitHub repository.
+[Online]. Available: https://github.com/osmr/imgclsmob
+[19] K. He, X. Zhang, S. Ren, and J. Sun, “Deep Residual Learning for
+Image Recognition,” in 2016 IEEE Conference on Computer Vision and
+Pattern Recognition (CVPR), Jun. 2016, pp. 770–778, iSSN: 1063-6919.
+[20] O. Russakovsky, J. Deng, H. Su, J. Krause, S. Satheesh, S. Ma,
+Z. Huang, A. Karpathy, A. Khosla, M. Bernstein, A. C. Berg, and
+L. Fei-Fei, “ImageNet Large Scale Visual Recognition Challenge,”
+International Journal of Computer Vision (IJCV) , vol. 115, no. 3, pp.
+211–252, 2015.
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:34 UTC from IEEE Xplore.  Restrictions apply. 

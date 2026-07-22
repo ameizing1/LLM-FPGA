@@ -1,0 +1,545 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\AxCore A qantization-Aware Approximate GEMM Unit for LLM - Micro25.pdf
+PAGES: 16
+--- PAGE 1 ---
+. 
+. 
+Latest updates: hps://dl.acm.org/doi/10.1145/3725843.3756094
+. 
+. 
+RESEARCH-ARTICLE
+AxCore: A antization-Aware Approximate GEMM Unit for LLM
+Inference
+JIAXIANG ZOU, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+YONGHAO CHEN, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+XINGYU CHEN, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+CHENXI XU, The Hong Kong University of Science and Technology (Guangzhou), Guangzhou,
+Guangdong, China
+. 
+XINYU CHEN, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+. 
+. 
+Open Access Support provided by:
+. 
+The Hong Kong University of Science and Technology (Guangzhou)
+. 
+PDF Download
+3725843.3756094.pdf
+30 December 2025
+Total Citations: 0
+Total Downloads: 3408
+. 
+. 
+. 
+. 
+Published: 18 October 2025
+. 
+. 
+Citation in BibTeX format
+. 
+. 
+MICRO 2025: 58th IEEE/ACM
+International Symposium on
+Microarchitecture
+October 18 - 22, 2025
+Seoul, Korea
+. 
+. 
+Conference Sponsors:
+SIGMICRO
+MICRO '25: Proceedings of the 58th IEEE/ACM International Symposium on Microarchitecture (October 2025)
+hps://doi.org/10.1145/3725843.3756094
+ISBN: 9798400715730
+.
+
+
+--- PAGE 2 ---
+AxCore: A Quantization-Aware Approximate GEMM Unit for LLM
+Inference
+Jiaxiang Zou∗
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+jiaxiangzou@std.uestc.edu.cn
+Yonghao Chen∗
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+ychen433@connect.hkust-gz.edu.cn
+Xingyu Chen
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+xchen740@connect.hkust-gz.edu.cn
+Chenxi Xu
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+cxu930@connect.hkust-gz.edu.cn
+Xinyu Chen†
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+xinyuchen@hkust-gz.edu.cn
+Abstract
+Large Language Models (LLMs) have become foundational to mod-
+ern natural language processing, yet their immense computational
+and memory demands pose major obstacles for efficient infer-
+ence. Transformer-based LLMs rely heavily on floating-point gen-
+eral matrix-matrix multiplication (FP-GEMM), which dominates
+both compute and bandwidth. In this paper, we introduce Ax-
+Core, a quantization-aware, approximate GEMM unit that combines
+weight-only quantization with floating-point multiplication approx-
+imation (FPMA) to deliver highly efficient and accurate LLM infer-
+ence. Unlike traditional GEMM units, AxCore eliminates multipliers
+entirely, replacing them with low-bit integer additions in a novel
+systolic array. AxCore features several key innovations: (1) a mixed-
+precision FPMA-based processing element that supports direct com-
+putation on compressed weights and high-precision activations;
+(2) a lightweight accuracy preservation strategy, including sub-
+normal number handling, error compensation, and format-aware
+quantization; and (3) a set of systolic array optimizations, including
+shared correction and normalization logic. Evaluations on open-
+source LLMs show that AxCore achieves up to 6.3×-12.5× higher
+compute density than conventional FP GEMM units. Compared
+to state-of-the-art INT4-based accelerators, FIGLUT and FIGNA,
+AxCore improves compute density by 53% and 70%, respectively,
+while also delivering lower perplexity. AxCore is opensourced at:
+https://github.com/CLab-HKUST-GZ/micro58-axcore.
+CCS Concepts
+• Computer systems organization→ Systolic arrays.
+∗Both authors contributed equally to this research.
+†Corresponding author.
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+MICRO ’25, Seoul, Republic of Korea
+© 2025 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ACM ISBN 979-8-4007-1573-0/25/10
+https://doi.org/10.1145/3725843.3756094
+Keywords
+Large Language Model, Approximate Computing, Weight-only
+Quantization, Hardware Accelerator
+ACM Reference Format:
+Jiaxiang Zou, Yonghao Chen, Xingyu Chen, Chenxi Xu, and Xinyu Chen.
+2025. AxCore: A Quantization-Aware Approximate GEMM Unit for LLM
+Inference. In 58th IEEE/ACM International Symposium on Microarchitecture
+(MICRO ’25), October 18–22, 2025, Seoul, Republic of Korea. ACM, New York,
+NY, USA, 15 pages. https://doi.org/10.1145/3725843.3756094
+1 Introduction
+Large language models (LLMs) have revolutionized natural language
+processing tasks such as language understanding, translation, and
+generation [10, 42, 48, 53]. These models comprise multiple stacked
+transformer layers, containing billions to hundreds of billions of
+parameters, leading to substantial memory and computational de-
+mands. For instance, GPT-3, with 175 billion parameters, requires
+approximately 350GB of memory in FP16 representation [5], far
+exceeding the capacity of standard hardware accelerators like GPUs
+[7]. The core computational bottleneck in LLMs stems from the
+transformer architecture, where general matrix-matrix multiplica-
+tion (GEMM) operations dominate both arithmetic throughput and
+memory bandwidth. These GEMM kernels, typically implemented
+using floating-point arithmetic (e.g., FP16 or BF16), are hardware
+expensive, hindering efficient inference.
+Quantization has emerged as a key technique to address these
+challenges by representing high-precision floating-point values
+with lower-precision data types. In particular, weight-only quanti-
+zation, which compresses model weights into low-bit formats (e.g.,
+INT4 or FP4) while preserving higher precision activations (e.g.,
+FP16), has been widely adopted for LLM inference [12, 15, 26, 29,
+30, 45]. This approach is effective because model weights consume
+significantly more memory than activations, and activations, be-
+ing dynamic and input-dependent, are difficult to quantize without
+compromising model accuracy [29, 30, 51]. However, such quantiza-
+tion necessitates mixed-precision GEMM (mpGEMM) units, where
+specialized hardware directly handles high-precision activations
+with quantized weights, thereby eliminating the explicit dequanti-
+zation step required by traditional GEMM units and improving both
+throughput and bandwidth efficiency [22, 40, 43, 46, 49, 50, 54].
+839
+
+--- PAGE 3 ---
+MICRO ’25, October 18–22, 2025, Seoul, Republic of Korea Jiaxiang Zou, Yonghao Chen, Xingyu Chen, Chenxi Xu, and Xinyu Chen
+/uni00000029/uni00000033/uni00000014/uni00000019/uni00000025/uni00000029/uni00000014/uni00000019
+/uni00000015
+/uni00000017
+/uni00000019/uni00000031/uni00000052/uni00000055/uni00000050/uni00000044/uni0000004f/uni0000004c/uni0000005d/uni00000048/uni00000047/uni00000003/uni00000037/uni00000032/uni00000033/uni00000036/uni00000012/uni00000050/uni00000050/uni00000015
+/uni00000014
+/uni00000017/uni00000011/uni00000013
+/uni00000019/uni00000011/uni0000001a
+/uni00000014
+/uni00000016/uni00000011/uni00000016
+/uni00000018/uni00000011/uni00000016
+/uni00000032/uni00000033/uni00000037/uni00000010/uni00000014/uni00000016/uni00000025/uni00000032/uni00000033/uni00000037/uni00000010/uni00000016/uni00000013/uni00000025/uni00000032/uni00000033/uni00000037/uni00000010/uni00000019/uni00000019/uni00000025/uni0000001c/uni00000011/uni00000018
+/uni00000014/uni00000013/uni00000011/uni00000013
+/uni00000014/uni00000013/uni00000011/uni00000018
+/uni00000014/uni00000014/uni00000011/uni00000013/uni00000033/uni00000048/uni00000055/uni00000053/uni0000004f/uni00000048/uni0000005b/uni0000004c/uni00000057/uni0000005c
+/uni00000014/uni00000013/uni00000011/uni00000017
+/uni00000014/uni00000013/uni00000011/uni00000018/uni00000018
+/uni00000014/uni00000013/uni00000011/uni00000017/uni00000015
+/uni0000001c/uni00000011/uni0000001b/uni00000015
+/uni0000001c/uni00000011/uni0000001c/uni00000018
+/uni0000001c/uni00000011/uni0000001a/uni0000001b
+/uni0000001c/uni00000011/uni00000019/uni0000001a
+/uni0000001c/uni00000011/uni0000001a/uni00000019
+/uni0000001c/uni00000011/uni00000019/uni0000001b
+/uni00000029/uni00000033/uni00000026/uni00000003/uni0000000b/uni00000029/uni00000033/uni00000017/uni0000000c/uni00000029/uni0000002c/uni0000002a/uni00000031/uni00000024/uni00000003/uni0000000b/uni0000002c/uni00000031/uni00000037/uni00000017/uni0000000c/uni00000024/uni0000005b/uni00000026/uni00000052/uni00000055/uni00000048/uni00000003/uni0000000b/uni00000029/uni00000033/uni00000017/uni0000000c
+(a) Compute density comparison (b) Accuracy comparison
+Figure 1: AxCore achieves significantly higher compute den-
+sity and comparable or better perplexity compared to conven-
+tional FP GEMM cores (FPC) and state-of-the-art INT4-based
+accelerator FIGNA [22].
+Meanwhile, floating-point multiplication approximation (FPMA)
+using integer addition has gained increasing attention for effi-
+cient model inference [24, 33, 36]. Mitchell’s logarithm approxima-
+tion [35] suggests that floating-point numbers can be interpreted
+within a logarithmic number system, while Gustafsson et al. [20]
+theoretically demonstrate that floating-point multiplication can be
+replaced with integer additions. This insight reveals that the costly
+floating-point multipliers in GEMM units can be substituted with
+simpler integer adders, offering significant resource savings for the
+intensive computations required by LLMs. While promising, exist-
+ing FPMA methods are limited to uniform-precision settings and
+suffer from accuracy loss when applied to deep LLMs, particularly
+under low-bit quantization, where subnormal values are frequent
+and error accumulation is non-trivial.
+In this paper, we proposeAxCore, a quantization-aware, approx-
+imate mpGEMM unit tailored for LLM inference. AxCore fuses low-
+bit quantization with FPMA to deliver highly efficient, multiplier-
+free mix-precision matrix multiplication, while preserving end-to-
+end model accuracy. It is built upon the following innovations:
+• Mixed-Precision FPMA Processing Elements (PEs) : AxCore
+extends FPMA to support direct mpGEMM between high-precision
+activations and low-bit quantized weights, which reduces dat-
+apath width and PE complexity. The design supports multiple
+floating-point formats concurrently, enabling flexible inference
+across diverse quantization configurations.
+• Lightweight Accuracy-Preserving Co-Design : To mitigate
+the approximation errors inherent in FPMA, AxCore introduces
+a lightweight software-hardware co-design featuring: (1) online
+subnormal number conversion for correctness in low-bit formats;
+(2) online constant-based error compensation; and (3) adaptive
+format-aware offline quantization.
+• Optimized Systolic Array Architecture : AxCore employs a
+highly efficient systolic array architecture that shares error cor-
+rection logic and result normalization logic across PEs to reduce
+hardware resource consumption.
+Extensive evaluations show that AxCore delivers superior hard-
+ware efficiency and accuracy. As shown in Figure 1, in the W4A16
+setting, AxCore achieves up to 6.7× higher compute density than
+conventional FP GEMM cores and 1.7× over INT4-based design,
+FIGNA [22]. Despite its approximate design, AxCore maintains com-
+petitive or even better perplexity compared to existing solutions.
+For instance, on the OPT-30B model, AxCore achieves a perplexity
+of 9.78, outperforming both FPC (9.82) and FIGNA (9.95). AxCore
+enables efficient LLM inference by bridging the gap between ap-
+proximate computing and mpGEMM operations.
+2 Background
+2.1 GEMM in LLM Inference
+Large Language Models (LLMs) are typically composed of multiple
+stacked transformer decoder blocks [5, 42, 48, 53], each containing
+masked self-attention and linear transformation layers. While the at-
+tention mechanism offers reasoning capability of transformers, the
+linear layers, including feed-forward networks and attention projec-
+tions, dominate the computational workload of LLM inference and
+contribute the majority of the model parameters [5, 10, 42, 48, 53].
+These layers rely heavily on general matrix-matrix multiplication
+(GEMM) because their core computations are dense linear trans-
+formations that map high-dimensional input activations to output
+activations through large weight matrices.
+Figure 2 illustrates the relative number of operations within
+attention mechanisms and linear layers across various sequence
+lengths for OPT-175B and LLaMA-3.1-405B. As shown, while the
+computational proportion of attention increases proportionally
+with sequence length during LLM inference, GEMM operations in
+linear layers continue to dominate the computational workload
+(69% - 99%) at practical sequence lengths (10k–20k tokens) [41]. No-
+tably, during the prefill phase, GEMM is also predominantly used in
+attention [22], which means that the true computational proportion
+of GEMM is even larger. This trend highlights that optimizing linear
+layer GEMM remains critical for improving overall LLM inference
+efficiency at scale.
+/uni00000024/uni00000057/uni00000057/uni00000048/uni00000051/uni00000057/uni0000004c/uni00000052/uni00000051/uni0000002f/uni0000004c/uni00000051/uni00000048/uni00000044/uni00000055
+/uni00000014/uni0000004e/uni00000015/uni0000004e/uni00000017/uni0000004e/uni0000001b/uni0000004e/uni00000014/uni00000019/uni0000004e/uni00000016/uni00000015/uni0000004e
+/uni00000036/uni00000048/uni00000054/uni00000058/uni00000048/uni00000051/uni00000046/uni00000048/uni00000003/uni0000002f/uni00000048/uni00000051/uni0000004a/uni00000057/uni0000004b
+/uni00000013/uni00000011/uni00000013/uni00000013
+/uni00000013/uni00000011/uni00000015/uni00000018
+/uni00000013/uni00000011/uni00000018/uni00000013
+/uni00000013/uni00000011/uni0000001a/uni00000018
+/uni00000014/uni00000011/uni00000013/uni00000013/uni00000035/uni00000048/uni0000004f/uni00000044/uni00000057/uni0000004c/uni00000059/uni00000048/uni00000003/uni00000032/uni00000033/uni00000056/uni00000003/uni00000033/uni00000048/uni00000055/uni00000046/uni00000048/uni00000051/uni00000057/uni00000044/uni0000004a/uni00000048
+/uni00000032/uni00000033/uni00000037/uni00000010/uni00000014/uni0000001a/uni00000018/uni00000025
+/uni00000014/uni0000004e/uni00000015/uni0000004e/uni00000017/uni0000004e/uni0000001b/uni0000004e/uni00000014/uni00000019/uni0000004e/uni00000016/uni00000015/uni0000004e
+/uni00000036/uni00000048/uni00000054/uni00000058/uni00000048/uni00000051/uni00000046/uni00000048/uni00000003/uni0000002f/uni00000048/uni00000051/uni0000004a/uni00000057/uni0000004b
+/uni00000013/uni00000011/uni00000013/uni00000013
+/uni00000013/uni00000011/uni00000015/uni00000018
+/uni00000013/uni00000011/uni00000018/uni00000013
+/uni00000013/uni00000011/uni0000001a/uni00000018
+/uni00000014/uni00000011/uni00000013/uni00000013/uni0000002f/uni0000002f/uni00000044/uni00000030/uni00000024/uni00000010/uni00000016/uni00000011/uni00000014/uni00000010/uni00000017/uni00000013/uni00000018/uni00000025
+Figure 2: Relative proportion of operations (OPs) in attention
+mechanism and linear layers of OPT-175B and LLaMA-3.1-
+405B across various sequence lengths with a batch size of 32.
+2.2 Weight-only Quantization
+To reduce both memory and computational overhead, quantization
+techniques are widely used in LLM inference. Quantization maps
+high-precision weights to compact low-bit formats (e.g., INT4 or
+FP4), significantly shrinking model size and reducing arithmetic bit
+width. In particular, weight-only quanti
+
+--- PAGE 4 ---
+AxCore: A Quantization-Aware Approximate GEMM Unit for LLM Inference MICRO ’25, October 18–22, 2025, Seoul, Republic of Korea
+or BF16)—has become the standard in both academic research and
+industry practice, widely adopted in modern AI hardware accelera-
+tors such as GPUs and TPUs [15, 18, 28, 29, 39].
+Quantization typically maps a weight𝑤 into a lower-bit repre-
+sentation𝑤𝑞 via a scaling factor𝑠:
+𝑠 = 𝑤max
+𝐹max
+, 𝑤 𝑞 = clamp
+
+round
+𝑤
+𝑠
+
+,−𝐹max,𝐹 max
+
+, (1)
+where𝐹max is the maximum representable value in the target format
+(e.g., 7 for INT4). The 𝑟𝑜𝑢𝑛𝑑 represents the rounding in integer
+quantization or mapping in floating-point quantization [ 32, 55].
+The𝑐𝑙𝑎𝑚𝑝 constrains quantized weights within the representable
+range[𝐹𝑚𝑖𝑛,𝐹𝑚𝑎𝑥].
+To preserve accuracy under aggressive low-bit quantization,
+grouped quantization is often applied [ 15, 29, 55]. This strategy
+divides weight tensors into smaller groups (e.g., 32 or 128 elements)
+and assigns each group a dedicated scaling factor (typically in
+FP16). This fine-grained approach better captures local distribu-
+tions within each group, reducing quantization error.
+2.3 Quantization-Aware GEMM
+In LLM inference, GEMM operations involve multiplying large
+matrices of weights and activations. When executed without quan-
+tization, GEMM is performed using full-precision operands (e.g.,
+FP16× FP16) [5, 29, 42, 48, 53], as illustrated in Figure 3a. With
+weight-only quantization, there are two common GEMM execu-
+tion strategies [15, 29, 49, 50]: indirect GEMM (Figure 3b), where
+quantized weights are first dequantized (i.e., multiplied by a scaling
+factor) to reconstruct floating-point values before GEMM is per-
+formed, and direct mixed-precision GEMM (mpGEMM) (Figure 3c),
+where GEMM is performed directly between low-bit weights and
+FP activations, followed by dequantization only on accumulated
+outputs. Direct mpGEMM is more hardware-efficient because it
+requires lightweight datapaths of GEMM units and avoids the over-
+head of per-weight dequantization [22, 40, 43, 46, 49, 50, 54].
+GEMM
+O (FP16)
+W (FP16) A (FP16)
+GEMM
+O (FP16)
+Wr (FP16)A (FP16)
+Wq (FP4/INT4)
+Dequantization
+mpGEMM
+Oq (FP16)
+A (FP16)Wq (FP4/INT4)
+Dequantization
+O (FP16)
+(a) Standard GEMM (b) Indirect GEMM (c) Direct mpGEMM
+Figure 3: Comparison of GEMM computation modes, with
+4-bit quantized weights and 16-bit activations.
+To reduce the hardware complexity of mpGEMM units, many
+hardware accelerators adopt uniform quantization formats such
+as INT4 or INT8 due to their simplicity [ 22, 40, 54]. For instance,
+FIGNA [22] uses INT4 quantization and designed INT4-FP16 mp-
+GEMM units, delivering up to 4𝑡𝑖𝑚𝑒𝑠 area savings. However, uni-
+form formats distribute values evenly, which does not align well
+with Gaussian-like distribution of LLM weights [19]. By contrast,
+non-uniform formats (e.g., FP4, FP8) allocate more representation
+near zero, showing higher accuracy potential. In this work, we
+demonstrate that FP-based quantization offers superior accuracy
+but also enables more efficient hardware implementation through
+our proposed AxCore architecture.
+2.4 FP Multiplication Approximation with
+Integer Addition (FPMA)
+Floating-point (FP) multiplication is a fundamental operation in
+many applications but remains costly in terms of hardware area
+due to its complexity. According to the IEEE 754 standard [ 1], a
+normalized floating-point (FP) number𝑥 is represented as:
+𝑥 =(−1)𝑆𝑥· 2𝐸𝑥−𝐵·( 1+𝑀𝑥), 0≤𝑀𝑥 < 1, (2)
+where 𝑆𝑥 is the sign bit, 𝐸𝑥 is the exponent represented using
+𝑁𝐸 bits (i.e.,𝑁𝐸 denotes the bit-width of the exponent field), and
+𝐵 = 2𝑁𝐸−1−1 denotes the bias.𝑀𝑥 is the mantissa which is encoded
+using𝑁𝑀 bits and implicitly assumes a leading one. FP multiplica-
+tion requires separate computation over sign, exponent, and man-
+tissa, followed by normalization and rounding, leading to notable
+hardware costs.
+To address this inefficiency, Floating-Point Multiplication Ap-
+proximation (FPMA) [6, 20, 31] replaces expensive multiplication
+with simpler integer additions. Based on Mitchell’s logarithmic
+approximation [35], FPMA approximates a floating-point number
+𝑥 into the logarithmic domain as:
+log2(|𝑥|) =𝐸𝑥−𝐵+ log2(1+𝑀𝑥)≈ 𝐸𝑥−𝐵+𝑀𝑥 (3)
+By linearizing the logarithmic term, the FP multiplication𝑟 =𝑥·𝑦
+is approximated as:
+log2(|𝑟|) =𝑙𝑜𝑔2(|𝑥·𝑦|)≈( 𝐸𝑥+𝑀𝑥)+( 𝐸𝑦+𝑀𝑦)− 2𝐵 (4)
+Since the product𝑟 can also be denoted as𝑙𝑜𝑔2(|𝑟|)≈ 𝐸𝑟+𝑀𝑟−𝐵,
+it enables the approximate multiplication to be implemented via:
+𝑅 =𝑋+𝑌−𝐵 (5)
+where𝑋 =𝐸𝑥+𝑀𝑥 ,𝑌 =𝐸𝑦+𝑀𝑦, and𝑅 =𝐸𝑟+𝑀𝑟 , which is the
+binary approximation of the result. All additions are integer opera-
+tions, eliminating the need for complex multipliers. Notably, the
+result𝑅 is already a standard floating-point value with its exponent
+and mantissa bits in order, requiring no special reconversion.
+While FPMA offers substantial hardware efficiency, it introduces
+approximation error due to the linearization of the logarithmic
+term, i.e., log2(1+𝑀)≈ 𝑀. This simplification can lead to accuracy
+degradation in precision-sensitive models like LLMs. Additionally,
+FPMA assumes normalized floating-point numbers and is not di-
+rectly applicable to subnormal numbers, which represent very small
+values and lack an implicit leading 1 in the mantissa.
+3 Adopting FPMA for Quantized LLM Inference
+3.1 Challenges
+While FPMA shows a large potential for improving hardware effi-
+ciency by replacing FP multipliers with lightweight integer adders,
+its adoption in quantized LLM inference remains challenging.
+Challenge 1: Hardware Support for FPMA-based mpGEMM.
+Modern LLMs commonly use weight-only quantization, which re-
+sults in mpGEMM operations, such as computing FP16 activations
+multiplied by FP4 or INT4 weights. While FPMA can be applied to
+841
+
+--- PAGE 5 ---
+MICRO ’25, October 18–22, 2025, Seoul, Republic of Korea Jiaxiang Zou, Yonghao Chen, Xingyu Chen, Chenxi Xu, and Xinyu Chen
+indirect GEMM (Figure 3b) by approximating full-precision multi-
+plications after dequantization, this approach negates the efficiency
+benefits of quantization. To fully exploit low-bit representations,
+FPMA must support direct mpGEMM (Figure 3c) where weights
+remain compressed during computation.
+However, traditional FPMA methods only support uniform pre-
+cision (e.g., FP16× FP16), and extending them to mpFPMA requires
+a fundamental redesign of the processing elements (PEs) and dat-
+apaths. The challenge lies in aligning operands of different for-
+mats, addressing bias mismatches, and maintaining adequate accu-
+racy in integer-based approximation. Moreover, designing efficient
+mpGEMM units that can handle such mixed-precision integer-based
+computations with minimal datapath overhead and maximal reuse
+is non-trivial. Without careful architectural innovations, mpFPMA
+suffers from excessive datapath width, inefficient format alignment,
+and redundant correction logic in each PE, limiting its scalability
+and hardware efficiency.
+Challenge 2: Preserving Accuracy with Minimal Costs.
+FPMA relies on the approximation log2(1+𝑀) ≈𝑀, which in-
+troduces systematic error that accumulates across layers in deep
+models. Figure 4 shows the perplexity degradation when applying
+FPMA across different sizes of the OPT model. While FP4 intro-
+duces moderate accuracy loss compared to full-precision FP16, in-
+troducing FPMA leads to noticeably higher perplexity. Note that
+perplexity difference > 1% usually is considered as significant. This
+demonstrates that FPMA, when used without proper error com-
+pensation, can result in unacceptable performance degradation.
+Although prior works [31, 33] have introduced error compensation
+techniques, such as bit-serial correction or additional bias terms,
+to mitigate FPMA numerical error, these approaches are typically
+tailored for same-precision FPMA (e.g., FP16× FP16). They do
+not generalize to mixed-precision FPMA (mpFPMA), where inputs
+differ in format and bit-width (e.g., FP16× FP4).
+Additionally, quantization into low-bit FP formats (e.g., FP4)
+generates a higher proportion of subnormal numbers due to signif-
+icantly fewer exponent bits. This is because subnormals in low-bit
+formats can represent relatively large numerical ranges. However,
+without a hidden leading 1 in their mantissa, subnormals make
+FPMA mathematically incorrect, leading to significant inaccuracies.
+As shown in Figure 4, failing to handle subnormals properly in mpF-
+PMA (naive mpFPMA) leads to further degradation in perplexity,
+which is an issue largely ignored in existing works.
+3.2 Our Solution – AxCore
+To address the above challenges, we proposeAxCore, a quantization-
+aware, approximate mpGEMM unit that tightly integrates FPMA
+with low-bit quantization for efficient and accurate LLM inference.
+Feature 1: Efficient mpGEMM Execution via mpFPMA-based
+Systolic Array Unit.
+To tackle the challenge of supporting mixed-precision GEMM with
+FPMA, AxCore introduces a systolic array of optimized mpFPMA
+PEs capable of directly computing on compressed low-bit weights
+and high-precision activations. To reduce datapath width and PE
+complexity, AxCore applies correction advancing, precomputing
+correction terms outside the PE and sharing them within rows.
+Normalization is deferred to a shared unit to reduce per-PE logic,
+/uni00000014/uni00000016
+/uni00000014/uni00000017
+/uni00000014/uni00000015/uni00000011/uni00000017/uni0000001a
+/uni00000014/uni00000015/uni00000011/uni0000001c/uni0000001a
+/uni00000014/uni00000016/uni00000011/uni00000017/uni00000013
+/uni00000014/uni00000016/uni00000011/uni0000001b/uni00000016/uni00000032/uni00000033/uni00000037/uni00000010/uni00000015/uni00000011/uni0000001a/uni00000025
+/uni00000014/uni00000013/uni00000011/uni00000013
+/uni00000014/uni00000013/uni00000011/uni00000018
+/uni00000014/uni00000014/uni00000011/uni00000013
+/uni00000014/uni00000013/uni00000011/uni00000014/uni00000016
+/uni00000014/uni00000013/uni00000011/uni00000017/uni00000013
+/uni00000014/uni00000013/uni00000011/uni00000018/uni00000019
+/uni00000014/uni00000013/uni00000011/uni0000001b/uni00000013/uni00000032/uni00000033/uni00000037/uni00000010/uni00000014/uni00000016/uni00000025
+/uni00000014/uni00000014
+/uni00000014/uni00000015
+/uni00000014/uni00000013/uni00000011/uni0000001b/uni00000019
+/uni00000014/uni00000014/uni00000011/uni00000014/uni00000013
+/uni00000014/uni00000014/uni00000011/uni00000016/uni0000001a
+/uni00000014/uni00000014/uni00000011/uni0000001b/uni00000016/uni00000032/uni00000033/uni00000037/uni00000010/uni00000019/uni00000011/uni0000001a/uni00000025
+/uni0000001c/uni00000011/uni00000019
+/uni0000001c/uni00000011/uni0000001b
+/uni00000014/uni00000013/uni00000011/uni00000013
+/uni0000001c/uni00000011/uni00000018/uni00000019
+/uni0000001c/uni00000011/uni0000001b/uni00000015
+/uni0000001c/uni00000011/uni0000001c/uni00000016/uni0000001c/uni00000011/uni0000001c/uni0000001c/uni00000032/uni00000033/uni00000037/uni00000010/uni00000016/uni00000013/uni00000025
+/uni00000033/uni00000048/uni00000055/uni00000053/uni0000004f/uni00000048/uni0000005b/uni0000004c/uni00000057/uni0000005c/uni00000003/uni00000052/uni00000051/uni00000003/uni0000003a/uni0000004c/uni0000004e/uni0000004c/uni00000037/uni00000048/uni0000005b/uni00000057/uni00000015
+/uni00000029/uni00000033/uni00000026/uni00000003/uni0000000b/uni00000029/uni00000033/uni00000014/uni00000019/uni0000000c/uni00000029/uni00000033/uni00000026/uni00000003/uni0000000b/uni00000029/uni00000033/uni00000017/uni0000000c/uni00000029/uni00000033/uni00000030/uni00000024/uni00000003/uni0000000b/uni00000029/uni00000033/uni00000017/uni0000000c/uni00000051/uni00000044/uni0000004c/uni00000059/uni00000048/uni00000003/uni00000050/uni00000053/uni00000029/uni00000033/uni00000030/uni00000024/uni00000003/uni0000000b/uni00000029/uni00000033/uni00000017/uni0000000c
+Figure 4: Perplexity comparison across different OPT model
+sizes using various computation methods. Activations are
+in FP16. FPMA and mpFPMA without subnormal handling
+result in significant accuracy loss.
+while FPMA-based dequantization eliminates the need for post-
+GEMM multipliers.
+Feature 2: Lightweight Accuracy Preservation Mechanisms.
+To address the inherent error introduced by FPMA, AxCore em-
+ploys a lightweight compensation mechanism designed specifi-
+cally for mixed-precision settings. This includes precomputed bias
+and correction terms that stabilize outputs across diverse operand
+combinations. Crucially, each PE integrates a subnormal number
+conversion logic, which detects and converts subnormal values
+to the nearest normalized representations, preventing accuracy
+degradation caused by malformed mantissa. In addition, AxCore
+employs adaptive format-aware quantization, dynamically selecting
+the most suitable FP4 encoding (e.g., E1M2, E2M1, E3M0) per weight
+group. This fine-grained adaptability further enhances quantization
+fidelity across layers with varying value distributions. Together,
+these features enable AxCore to deliver high hardware efficiency
+while maintaining the accuracy required for LLM inference.
+4 Accuracy-Preserved mpFPMA for LLM
+4.1 Extending FPMA to mpFPMA
+To enable efficient mixed-precision general matrix-matrix mul-
+tiplication (mpGEMM) for quantized LLM inference, we extend
+Floating-Point Multiplication Approximation (FPMA) to support
+operands with different precision levels. While the approximation
+formula remains structurally similar to conventional FPMA, the bit
+widths, fixed-point alignment, and bias correction must be carefully
+redesigned. For illustration, we denote 𝑟 = 𝑎×𝑤𝑞 as the multi-
+plication between the input activation 𝑎 in FP16 and the low-bit
+quantized weight𝑤𝑞 in FP4.
+In mpFPMA, operands are first aligned to a common fixed-
+point representation to ensure correct addition. Since FP4 contains
+fewer mantissa bits than FP16, we left-shift (i.e., zero-pad) the FP4
+operand’s mantissa to match the resolution of FP16. The aligned
+value is expressed as:
+Align(𝑤𝑞) =𝑤𝑞≪( MantissaFP16− MantissaFP4) (6)
+This ensures the radix point aligns across both operands. However,
+due to differing exponent biases (e.g., 15 for FP16 vs. 1 for FP4
+E2M1), a format-aware bias correction term𝐵1 is needed:
+842

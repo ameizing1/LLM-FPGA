@@ -1,0 +1,52 @@
+{
+  "tcasi24_lsam1": {
+    "error_rate": 0.076416015625,
+    "mean_error": 0.0,
+    "mae": 38.1875,
+    "rmse": 260.5427028339117,
+    "p99_abs_error": 2048.0,
+    "max_abs_error": 2312.0,
+    "mean_relative_error_nonzero": 0.004345086732046266,
+    "relative_l2_error": 0.047705337880419606
+  },
+  "tcasi24_csam2": {
+    "error_rate": 0.43475341796875,
+    "mean_error": 0.0,
+    "mae": 304.9375,
+    "rmse": 849.3500456231224,
+    "p99_abs_error": 4096.0,
+    "max_abs_error": 4624.0,
+    "mean_relative_error_nonzero": 0.04504833423048869,
+    "relative_l2_error": 0.15551589226826373
+  },
+  "fpga_cand17": {
+    "error_rate": 0.74560546875,
+    "mean_error": 0.0,
+    "mae": 87.9156494140625,
+    "rmse": 148.6011334916393,
+    "p99_abs_error": 535.0,
+    "max_abs_error": 880.0,
+    "mean_relative_error_nonzero": 0.03874163743009197,
+    "relative_l2_error": 0.02720884985656675
+  },
+  "fpga_cand20": {
+    "error_rate": 0.740478515625,
+    "mean_error": 0.0,
+    "mae": 116.821044921875,
+    "rmse": 206.4251529005126,
+    "p99_abs_error": 708.0,
+    "max_abs_error": 930.0,
+    "mean_relative_error_nonzero": 0.0440932654370885,
+    "relative_l2_error": 0.03779642092841025
+  },
+  "fpga_cand10": {
+    "error_rate": 0.69091796875,
+    "mean_error": 0.0,
+    "mae": 116.6806640625,
+    "rmse": 205.50855365409976,
+    "p99_abs_error": 697.2000000000116,
+    "max_abs_error": 930.0,
+    "mean_relative_error_nonzero": 0.04468266403761874,
+    "relative_l2_error": 0.03762859171548105
+  }
+}

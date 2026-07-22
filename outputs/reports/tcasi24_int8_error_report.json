@@ -1,0 +1,136 @@
+{
+  "product_level": {
+    "lsam1": {
+      "error_rate": 0.076416015625,
+      "mean_error": 0.0,
+      "mae": 38.1875,
+      "rmse": 260.5427028339117,
+      "max_abs_error": 2312.0,
+      "mean_relative_error_nonzero": 0.004345086732046266,
+      "p99_abs_error": 2048.0,
+      "relative_l2_error": 0.047705337880419606
+    },
+    "csam2": {
+      "error_rate": 0.43475341796875,
+      "mean_error": 0.0,
+      "mae": 304.9375,
+      "rmse": 849.3500456231224,
+      "max_abs_error": 4624.0,
+      "mean_relative_error_nonzero": 0.04504833423048869,
+      "p99_abs_error": 4096.0,
+      "relative_l2_error": 0.15551589226826373
+    }
+  },
+  "gemm_level": {
+    "uniform_int8": {
+      "lsam1": {
+        "error_rate": 0.987548828125,
+        "mean_error": 4.59375,
+        "mae": 2155.1640625,
+        "rmse": 2850.6764548085775,
+        "max_abs_error": 10880.0,
+        "mean_relative_error_nonzero": 0.17885893647914064,
+        "p99_abs_error": 8169.200000000004,
+        "relative_l2_error": 0.045849989675468446
+      },
+      "csam2": {
+        "error_rate": 0.99951171875,
+        "mean_error": 14.041015625,
+        "mae": 7678.794921875,
+        "rmse": 9683.114566250108,
+        "max_abs_error": 40224.0,
+        "mean_relative_error_nonzero": 0.594832170267755,
+        "p99_abs_error": 25083.20000000001,
+        "relative_l2_error": 0.1557422281788756
+      }
+    },
+    "small_normal": {
+      "lsam1": {
+        "error_rate": 0.71923828125,
+        "mean_error": 0.328125,
+        "mae": 9.0546875,
+        "rmse": 12.013013776733963,
+        "max_abs_error": 48.0,
+        "mean_relative_error_nonzero": 0.01711495122692735,
+        "p99_abs_error": 32.0,
+        "relative_l2_error": 0.004185450852972958
+      },
+      "csam2": {
+        "error_rate": 0.970703125,
+        "mean_error": 1.66015625,
+        "mae": 111.74609375,
+        "rmse": 143.48573535372776,
+        "max_abs_error": 592.0,
+        "mean_relative_error_nonzero": 0.19969024174741773,
+        "p99_abs_error": 392.0,
+        "relative_l2_error": 0.049991825913728964
+      }
+    },
+    "sparse_small": {
+      "lsam1": {
+        "error_rate": 0.145751953125,
+        "mean_error": 0.0234375,
+        "mae": 1.22265625,
+        "rmse": 3.2739502134271987,
+        "max_abs_error": 24.0,
+        "mean_relative_error_nonzero": 0.018680940796503717,
+        "p99_abs_error": 8.0,
+        "relative_l2_error": 0.0067825175307319845
+      },
+      "csam2": {
+        "error_rate": 0.763916015625,
+        "mean_error": -0.9453125,
+        "mae": 23.2578125,
+        "rmse": 36.78229873186286,
+        "max_abs_error": 168.0,
+        "mean_relative_error_nonzero": 0.32208426022439884,
+        "p99_abs_error": 120.0,
+        "relative_l2_error": 0.07620048250774299
+      }
+    },
+    "outlier_channels": {
+      "lsam1": {
+        "error_rate": 0.76025390625,
+        "mean_error": -1.2109375,
+        "mae": 57.49609375,
+        "rmse": 224.71572319265957,
+        "max_abs_error": 2192.0,
+        "mean_relative_error_nonzero": 0.09517228809362374,
+        "p99_abs_error": 1947.2000000000116,
+        "relative_l2_error": 0.05669154147266865
+      },
+      "csam2": {
+        "error_rate": 0.985595703125,
+        "mean_error": 16.962890625,
+        "mae": 268.947265625,
+        "rmse": 597.2038361187912,
+        "max_abs_error": 6408.0,
+        "mean_relative_error_nonzero": 0.3819766533375301,
+        "p99_abs_error": 3796.0000000000146,
+        "relative_l2_error": 0.15066327163025678
+      }
+    },
+    "nonnegative_activation_x_weight": {
+      "lsam1": {
+        "error_rate": 0.91796875,
+        "mean_error": -0.5546875,
+        "mae": 130.234375,
+        "rmse": 173.54448277026844,
+        "max_abs_error": 896.0,
+        "mean_relative_error_nonzero": 0.08656758063131237,
+        "p99_abs_error": 496.0,
+        "relative_l2_error": 0.012572322157166197
+      },
+      "csam2": {
+        "error_rate": 0.996337890625,
+        "mean_error": 39.017578125,
+        "mae": 506.912109375,
+        "rmse": 638.0216125845582,
+        "max_abs_error": 2688.0,
+        "mean_relative_error_nonzero": 0.33174205883573127,
+        "p99_abs_error": 1664.4000000000015,
+        "relative_l2_error": 0.04622107904903083
+      }
+    }
+  }
+}

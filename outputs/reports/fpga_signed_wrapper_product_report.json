@@ -1,0 +1,229 @@
+{
+  "product_level": {
+    "all": {
+      "cand10": {
+        "cases": 65536.0,
+        "error_rate": 0.69091796875,
+        "mean_error": 0.0,
+        "mae": 116.6806640625,
+        "rmse": 205.50855365409976,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.04468266403761874,
+        "relative_l2_error": 0.03762859171548105
+      },
+      "cand17": {
+        "cases": 65536.0,
+        "error_rate": 0.74560546875,
+        "mean_error": 0.0,
+        "mae": 87.9156494140625,
+        "rmse": 148.6011334916393,
+        "max_abs_error": 880.0,
+        "mean_relative_error_nonzero": 0.03874163743009197,
+        "relative_l2_error": 0.02720884985656675
+      },
+      "cand20": {
+        "cases": 65536.0,
+        "error_rate": 0.740478515625,
+        "mean_error": 0.0,
+        "mae": 116.821044921875,
+        "rmse": 206.4251529005126,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.0440932654370885,
+        "relative_l2_error": 0.03779642092841025
+      }
+    },
+    "nonnegative_x_nonnegative": {
+      "cand10": {
+        "cases": 16384.0,
+        "error_rate": 0.69091796875,
+        "mean_error": -29.0546875,
+        "mae": 116.6806640625,
+        "rmse": 205.50855365409976,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.045035188620592706,
+        "relative_l2_error": 0.03807476677241311
+      },
+      "cand17": {
+        "cases": 16384.0,
+        "error_rate": 0.74560546875,
+        "mean_error": 19.640625,
+        "mae": 87.9156494140625,
+        "rmse": 148.6011334916393,
+        "max_abs_error": 880.0,
+        "mean_relative_error_nonzero": 0.0390472901899022,
+        "relative_l2_error": 0.027531474477376434
+      },
+      "cand20": {
+        "cases": 16384.0,
+        "error_rate": 0.740478515625,
+        "mean_error": -11.48046875,
+        "mae": 116.821044921875,
+        "rmse": 206.4251529005126,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.044441139950503424,
+        "relative_l2_error": 0.03824458599361048
+      }
+    },
+    "nonnegative_x_negative": {
+      "cand10": {
+        "cases": 16384.0,
+        "error_rate": 0.69091796875,
+        "mean_error": 29.0546875,
+        "mae": 116.6806640625,
+        "rmse": 205.50855365409976,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.04468335120949433,
+        "relative_l2_error": 0.03763117557425139
+      },
+      "cand17": {
+        "cases": 16384.0,
+        "error_rate": 0.74560546875,
+        "mean_error": -19.640625,
+        "mae": 87.9156494140625,
+        "rmse": 148.6011334916393,
+        "max_abs_error": 880.0,
+        "mean_relative_error_nonzero": 0.03874223323529359,
+        "relative_l2_error": 0.027210718218419472
+      },
+      "cand20": {
+        "cases": 16384.0,
+        "error_rate": 0.740478515625,
+        "mean_error": 11.48046875,
+        "mae": 116.821044921875,
+        "rmse": 206.4251529005126,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.044093943544640114,
+        "relative_l2_error": 0.037799016311581696
+      }
+    },
+    "negative_x_nonnegative": {
+      "cand10": {
+        "cases": 16384.0,
+        "error_rate": 0.69091796875,
+        "mean_error": 29.0546875,
+        "mae": 116.6806640625,
+        "rmse": 205.50855365409976,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.04468335120949433,
+        "relative_l2_error": 0.03763117557425139
+      },
+      "cand17": {
+        "cases": 16384.0,
+        "error_rate": 0.74560546875,
+        "mean_error": -19.640625,
+        "mae": 87.9156494140625,
+        "rmse": 148.6011334916393,
+        "max_abs_error": 880.0,
+        "mean_relative_error_nonzero": 0.03874223323529359,
+        "relative_l2_error": 0.027210718218419472
+      },
+      "cand20": {
+        "cases": 16384.0,
+        "error_rate": 0.740478515625,
+        "mean_error": 11.48046875,
+        "mae": 116.821044921875,
+        "rmse": 206.4251529005126,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.04409394354464012,
+        "relative_l2_error": 0.037799016311581696
+      }
+    },
+    "negative_x_negative": {
+      "cand10": {
+        "cases": 16384.0,
+        "error_rate": 0.69091796875,
+        "mean_error": -29.0546875,
+        "mae": 116.6806640625,
+        "rmse": 205.50855365409976,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.04433426252817015,
+        "relative_l2_error": 0.03719275244848426
+      },
+      "cand17": {
+        "cases": 16384.0,
+        "error_rate": 0.74560546875,
+        "mean_error": 19.640625,
+        "mae": 87.9156494140625,
+        "rmse": 148.6011334916393,
+        "max_abs_error": 880.0,
+        "mean_relative_error_nonzero": 0.03843955953814286,
+        "relative_l2_error": 0.02689369893975917
+      },
+      "cand20": {
+        "cases": 16384.0,
+        "error_rate": 0.740478515625,
+        "mean_error": -11.48046875,
+        "mae": 116.821044921875,
+        "rmse": 206.4251529005126,
+        "max_abs_error": 930.0,
+        "mean_relative_error_nonzero": 0.04374945961069761,
+        "relative_l2_error": 0.037358637752332384
+      }
+    },
+    "has_minus128": {
+      "cand10": {
+        "cases": 511.0,
+        "error_rate": 0.0,
+        "mean_error": 0.0,
+        "mae": 0.0,
+        "rmse": 0.0,
+        "max_abs_error": 0.0,
+        "mean_relative_error_nonzero": 0.0,
+        "relative_l2_error": 0.0
+      },
+      "cand17": {
+        "cases": 511.0,
+        "error_rate": 0.0,
+        "mean_error": 0.0,
+        "mae": 0.0,
+        "rmse": 0.0,
+        "max_abs_error": 0.0,
+        "mean_relative_error_nonzero": 0.0,
+        "relative_l2_error": 0.0
+      },
+      "cand20": {
+        "cases": 511.0,
+        "error_rate": 0.0,
+        "mean_error": 0.0,
+        "mae": 0.0,
+        "rmse": 0.0,
+        "max_abs_error": 0.0,
+        "mean_relative_error_nonzero": 0.0,
+        "relative_l2_error": 0.0
+      }
+    },
+    "small_magnitude_le_16": {
+      "cand10": {
+        "cases": 1089.0,
+        "error_rate": 0.3342516069788797,
+        "mean_error": 0.0,
+        "mae": 7.258034894398531,
+        "rmse": 17.461278162782165,
+        "max_abs_error": 98.0,
+        "mean_relative_error_nonzero": 0.07286218140540901,
+        "relative_l2_error": 0.19258762679539151
+      },
+      "cand17": {
+        "cases": 1089.0,
+        "error_rate": 0.4297520661157025,
+        "mean_error": 0.0,
+        "mae": 6.809917355371901,
+        "rmse": 14.21234735233925,
+        "max_abs_error": 80.0,
+        "mean_relative_error_nonzero": 0.07699589903203997,
+        "relative_l2_error": 0.15675383109197705
+      },
+      "cand20": {
+        "cases": 1089.0,
+        "error_rate": 0.4554637281910009,
+        "mean_error": 0.0,
+        "mae": 6.023875114784206,
+        "rmse": 11.583211942206344,
+        "max_abs_error": 48.0,
+        "mean_relative_error_nonzero": 0.08668478000135926,
+        "relative_l2_error": 0.1277560140684523
+      }
+    }
+  },
+  "interpretation": "Signed-wrapper precision baseline, not final signed RTL resource/timing result."
+}

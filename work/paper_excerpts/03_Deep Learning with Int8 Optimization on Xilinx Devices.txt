@@ -1,0 +1,246 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Deep Learning with Int8 Optimization on Xilinx Devices.pdf
+PAGES: 11
+--- PAGE 1 ---
+WP486 (v1.0.1) April 24, 2017 www.xilinx.com  1
+© Copyright 2016–2017 Xilinx, Inc. Xi linx, the Xilinx logo, Artix, ISE, Kintex, Spartan, Virtex, Vivado, Zynq, and other design ated brands included herein are trademarks of 
+Xilinx in the United States and other countries. All othe r trademarks are the property of their respective owners.
+ 
+Xilinx INT8 optimization provides the best performance and most 
+power efficient computational te chniques for deep learning 
+inference. Xilinx's integrated DS P architecture can achieve 1.75X 
+solution-level performance at INT8 deep learning operations than 
+other FPGA DSP architectures.
+White Paper:  UltraScale and UltraScale+ FPGAs
+WP486 (v1.0.1) April 24, 2017
+Deep Learning 
+with INT8 Optimization 
+on Xilinx Devices
+By:  Yao Fu, Ephrem Wu, Ashish Sirasao, Sedny Attia, Kamran Khan, and Ralph Wittig
+ABSTRACT
+The intent of this white paper is to explore INT8 deep learning operations 
+implemented on the Xilinx DSP48E2 slice,  and how this contrasts with other 
+FPGAs. With INT8, Xilinx's DSP ar chitecture can achieve 1.75X peak 
+solution-level performance at INT8 deep learning operation per second (OPS) 
+compared to other FPGAs with the same  resource count. As deep learning 
+inference exploits lower bit precision without sacrificing accuracy, efficient 
+INT8 implementations are needed. 
+Xilinx's DSP architecture and libraries are optimized for INT8 deep learning 
+inference. This white paper describes how the DSP48E2 slice in Xilinx's 
+UltraScale and UltraScale+ FPGAs can be used to process two concurrent INT8 
+multiply and accumulate (MACC) operat ions while sharing the same kernel 
+weights. It also explains why 24-bit is the minimal size for an input to utilize this 
+technique, which is unique to Xilinx. Th e white paper also includes an example 
+of this INT8 optimization technique to show its relevance by revisiting the 
+fundamental operations of neural networks
+
+--- PAGE 2 ---
+WP486 (v1.0.1) April 24, 2017 www.xilinx.com  2
+Deep Learning with INT8 Opti mization on Xilinx Devices
+INT8 for Deep Learning
+Deep neural networks have propelled an evolutio n in machine learning fields and redefined many 
+existing applications with new human-level AI capabilities. 
+While more accurate deep learning models have been developed, their complexity is accompanied 
+by high compute and memory bandwidth challenges . Power efficiency is driving innovation in 
+developing new deep learning inference models that require lower compute intensity and memory 
+bandwidth but must not be at the cost of accura cy and throughput. Reducing this overheard will 
+ultimately increase power efficiency and lower the total power required. 
+In addition to saving power du ring computation, lower bit-widt h compute also lowers the power 
+needed for memory bandwidth, because fewer bits are transfe rred with the same amount of 
+memory transactions.
+Research has shown that floating point computations  are not required in deep learning inferences 
+to keep the same level of accuracy [Ref 1][Ref 2][Ref 3] , and many applications, such as image 
+classification, only require INT8 or lower fixed point compute precision to keep an acceptable 
+inference accuracy [Ref 2][Ref 3] . Table 1  shows fine-tuned networks with dynamic fixed point 
+parameters and outputs for convolutional and fully  connected layers. The numbers in parentheses 
+indicate accuracy without fine-tuning.
+INT8 Deep Learning on Xilinx DSP Slices
+Xilinx's DSP48E2 is designed to do one multiplicat ion and addition operation, with up to 18x27 bit 
+multiplication and up to 48-bits accumulation, ef ficiently within one clock cycle as shown in 
+Figure 1 . While looping back to itself or chaining mu ltiple DSP slices together, multiplication and 
+accumulation (MACC) can also be do ne efficiently with Xilinx devices.
+Table 1: CNN Models with Fixed-Point Precision
+Layer 
+Outputs
+CONV 
+Parameters
+FC 
+Parameters
+32-Bit Floating 
+Point Baseline
+Fixed Point 
+Accuracy
+LeNet (Exp1) 4-bit 4-bit 4-bit 99.1% 99.0% (98.7%)
+LeNet (Exp2) 4-bit 2-bit 2-bit 99.1% 98.8% (98.0%)
+Full CIFAR-10 8-bit 8-bit 8-bit 81.7% 81.4% (80.6%)
+SqueezeNet top-1 8-bit 8-bit 8-bit 57.7% 57.1% (55.2%)
+CaffeNet top-1 8-bit 8-bit 8-bit 56.9% 56.0% (55.8%)
+GoogLeNet top-1 8-bit 8-bit 8-bit 68.9% 66.6% (66.1%)
+Notes: 
+1. Source: Gysel et al, Hardware-oriented Approxim ation of Convolutional Neural Networks, ICLR 2016 [Ref 2]
+
+--- PAGE 3 ---
+WP486 (v1.0.1) April 24, 2017 www.xilinx.com  3
+Deep Learning with INT8 Opti mization on Xilinx Devices
+While running INT8 computations, the wide 27-b it width is innately taken advantage of. In 
+traditional applications , the pre-adder is usually utilized to implement (A+B) x C type of 
+computations efficiently, but this type of comput ation is not very often seen in deep learning 
+applications. Separating out the result of (A+B) x C into A x C and B x C, allows the accumulation in 
+a separate dataflow, allowing it to fit a ty pical deep learning computation requirement. 
+Having an 18x27 bit multiplier  is an advantage for INT8 deep learning operations.  At a minimum 
+one of the inputs to the multiplier needs to be at least 24-bits and the carry accumulator needs to 
+be 32-bits to perform two INT8 MACC concurrently  on one DSP slice. The 27-bit input can be 
+combined with a 48-bit accumulator to achieve a 1.75X deep learning solution performance 
+improvement (1.75:1 DSP multiplier to INT8 deep learning MACC ra tio). FPGAs from other vendors 
+only have an 18x19 multiplier in a single DSP bloc k and are limited to a 1:1 ratio of DSP multiplier 
+to INT8 MACC. 
+Scalable INT8 Optimization
+The goal is to find a way to efficiently encode input a, b, and c so that the multiplication results 
+between a, b and c can be easily separated into a x c  and b x c . 
+In a reduced precision computation, e.g., INT8 mult iplication, the higher 10- bit or 19-bit inputs are 
+filled with 0s or 1s, and carry only 1-bit of informat ion. This is also the same for the upper 29-bits 
+of the final 45-bit product. Because of this, it is possible to use the higher 19-bits to carry another 
+computation while the lowe r 8-bit and 16-bit input results are not affected. 
+Generally, two rules must be fo llowed to utilize the unused upper bits fo r another computation:
+1. Upper bits should not affect th e computation of the lower bits. 
+2. Any contamination of the upper bits by the comp utation of the lower bits must be detectable 
+and recoverable
+To satisfy the above rules, the least significant bit of the upper product results must not fall into the 
+lower 16-bits. Thus, the upper bits input should start with at least the 17th bit. For an 8-bit upper 
+input that requires a minimum of 16 + 8 = 24-bits total input size. This minimum 24-bit input size 
+X-Ref Target - Figure 1
+Figure 1: DSP Slice with MACC Mode
+WP486_01_110816
+bB
+Accumulated Results
+Accumulated results
+loopback or forward
+to next DSP
+C
+D
+aA
+18 x 27
+Pattern
+Detect
+W
+ALU
+Output Registers
+
+--- PAGE 4 ---
+WP486 (v1.0.1) April 24, 2017 www.xilinx.com  4
+Deep Learning with INT8 Opti mization on Xilinx Devices
+can only guarantee two concurrent multiplicatio ns with one multiplier— but still not enough to 
+reach the overall 1.75X MACC throughput. 
+Following are the steps to compute ac and bc in parallel in one DSP48E2 slice, which is used as an 
+arithmetic unit with a 27-bit pr e-adder (both inputs and output s are 27-bits-wide) and a 27x18 
+multiplier. See Figure 2 .
+1. Pack 8-bit input a and b in the 27-bit port p of the DSP48E2 multiplier via the pre-adder so that 
+the 2-bit vectors are as far apart as possible. 
+The input a is left-shifted by only 18-bits so that two sign bits a in the 27-bit result from the first 
+term to prevent overflow in the pre-adder when b<0 and a = –128. The shift amount for a being 
+18, or the width of the DSP48E2 multiplier port B, is coincidental. 
+2. The DSP48E2 27x18 multiplier is used to compute the product of packed 27-bit port p and an 
+8-bit coefficient represented in 18-bit c in two's complement format. Now this 45-bit product is 
+the sum of two 44-bit terms in two's complement format: ac left-shifted by 18-bits, and bc.
+The post adder can be used to accumulate the above 45-bit product, which contains separable 
+upper and lower product terms. Correct accumulati ons are carried for the upper and lower terms 
+while accumulating the single 45-bit product. The final accumulation results, if not overflowed, can 
+be separated by simple operations.
+The limitation of this technique is the number of  product terms each DSP slice can accumulate. 
+With 2-bits remaining between the lower and upper product terms ( Figure 3 ), accumulation of up 
+to 7 product terms only can be guaranteed with no overflow for the lower bits. After 7 product 
+terms, an additional DSP slice is re quired to extend this limitation. As a result, 8 DSP slices here 
+perform 7x2 INT8 multiply-add operations, 1.75X th e INT8 deep learning operations compared to 
+competitive devices with the same number of multipliers.
+There are many variations of this technique, depe nding on the requirements of actual use cases. 
+Convolutional neural networks (CNN) with rect ified linear unit (ReLU) produce non-negative 
+X-Ref Target - Figure 2
+Figure 2: 8-Bit Optimization
+WP486_02_110816
+cB
+Accumulated
+Results
+Accumulated results
+loopback or forward
+to next DSP
+C
+D
+a <<18 A
+18 x 27
+Pattern
+Detect
+W
+ALU
+Output Registers
+b
+p
+
+--- PAGE 5 ---
+WP486 (v1.0.1) April 24, 2017 www.xilinx.com  5
+Deep Learning with INT8 Opti mization on Xilinx Devices
+activation, and the unsigned  INT8 format creates one more bit of precision and 1.78X peak 
+throughput improvement.
+Compute Requirements for CNN
+Modern neural networks are mostly deri ved from the original perceptron model [Ref 4] . See 
+Figure 4 .
+X-Ref Target - Figure 3
+Figure 3: Packing Two INT8 Multiplication with a Single DSP48E2 Slice
+WP486_03_110816
++
++
++
++
+=
+=
+a[0]a[7] ......
+c[0]c[7] ......
+ac[0]ac[15] ......... .....
+bc[0]bc[15] ......... .....
+ac[0]ac[15] ......... .....
+0x0......... .....0x0 ....a[7] .... a[0]x
+b[0].......... . b[7] b[7] b[7]...... .....b[7]
+c[0].......... . 0x0 0x0 c[7]...... .....0x0
+bc[0]......... .....bc[15]bc[15] .ac[0]ac[15] .... . . .... .... bc[15]
++
+=
+b[0]b[7] ......
+c[0]c[7] ......
+bc[0]bc[15] ......... .....
+X-Ref Target - Figure 4
+Figure 4: Perceptron and Deep Neural Networks
+a1
+an
+w1
+wi
+wn
+∑
+w01
+Activation Function
+WP486_04_110916
+Perceptron
+ai
+an
+oj
+om
+o1a1
+Deep Neural Networks
+...
+... ...
+...
+...
+...
+...
+...
+...
+Convolution
+Fully Connected
+Input
+Input
+Output
+Output
+Input Output
+Recurrent
+Neural Network 
+Layer
+Sum of Product Terms
+(Dot Product of Vectors A and W)
+ai

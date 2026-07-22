@@ -1,0 +1,573 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\CXL-SpeckKV - FPGA26.pdf
+PAGES: 11
+--- PAGE 1 ---
+CXL-SpecKV: A Disaggregated FPGA Speculative KV-Cache for
+Datacenter LLM Serving
+Dong Liu
+Yale University
+New Haven, Connecticut, USA
+dong.liu.dl2367@yale.edu
+Yanxuan Yu
+Columbia University
+New York, New York, USA
+yy3523@columbia.edu
+Abstract
+Large Language Models (LLMs) have revolutionized natural lan-
+guage processing tasks, but their deployment in datacenter envi-
+ronments faces significant challenges due to the massive memory
+requirements of key-value (KV) caches. During the autoregressive
+decoding process, KV caches consume substantial GPU memory,
+limiting batch sizes and overall system throughput. To address
+these challenges, we proposeCXL-SpecKV, a novel disaggregated
+KV-cache architecture that leverages Compute Express Link (CXL)
+interconnects and FPGA accelerators to enable efficient speculative
+execution and memory disaggregation. Our approach introduces
+three key innovations: (i) a CXL-based memory disaggregation
+framework that offloads KV-caches to remote FPGA memory with
+low latency, (ii) a speculative KV-cache prefetching mechanism that
+predicts and preloads future tokens’ cache entries, and (iii) an FPGA-
+accelerated KV-cache compression and decompression engine that
+reduces memory bandwidth requirements by up to 4×. When eval-
+uated on state-of-the-art LLM models, CXL-SpecKV achieves up
+to 3.2× higher throughput compared to GPU-only baselines, while
+reducing memory costs by 2.8× and maintaining accuracy. Our sys-
+tem demonstrates that intelligent memory disaggregation combined
+with speculative execution can effectively address the memory wall
+challenge in large-scale LLM serving. Our code implementation has
+been open-sourced at https://github.com/FastLM/CXL-SpecKV.
+CCS Concepts
+•Hardware;•Computer systems organization → Architec-
+tures;•Networks;
+Keywords
+CXL, FPGA, LLM, KV-cache, memory disaggregation, speculative
+execution, deep learning
+ACM Reference Format:
+Dong Liu and Yanxuan Yu. 2026. CXL-SpecKV: A Disaggregated FPGA
+Speculative KV-Cache for Datacenter LLM Serving. InProceedings of the
+2026 ACM/SIGDA International Symposium on Field Programmable Gate
+Arrays (FPGA ’26), February 22–24, 2026, Seaside, CA, USA.ACM, New York,
+NY, USA, 11 pages. https://doi.org/10.1145/3748173.3779188
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+FPGA ’26, Seaside, CA, USA
+©2026 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-2079-6/2026/02
+https://doi.org/10.1145/3748173.3779188
+1 Introduction
+Large Language Models (LLMs) have emerged as the cornerstone
+of modern AI applications [7, 33, 46]. However, serving them effi-
+ciently faces significant challenges due to massive memory require-
+ments of key-value (KV) caches. During inference, transformer-
+based LLMs store intermediate key and value tensors from all previ-
+ous tokens. For a typical LLaMA-2 70B model serving 2048 tokens
+with batch size 32, the KV-cache alone consumes 640GB—far ex-
+ceeding GPU capacity [19].
+Traditional approaches include memory offloading [ 41], KV-
+cache compression [ 16], and speculative decoding [ 20], but suf-
+fer from limited bandwidth, accuracy degradation, or persistent
+memory constraints.
+Recent advances in Compute Express Link (CXL) [11] and FPGA
+architectures [12] present new opportunities. CXL provides high-
+bandwidth, low-latency cache-coherent memory sharing, while
+FPGAs offer customizable acceleration.
+We proposeCXL-SpecKV, combining CXL memory disaggre-
+gation with FPGA-accelerated speculative execution. By predicting
+and preloading KV-cache entries through CXL, we overcome GPU
+memory limits while maintaining low latency.
+CXL-SpecKV features: (i) transparent KV-cache offloading to
+CXL memory (4-8×capacity expansion), (ii) speculative prefetching
+with 95% accuracy reducing access latency, (iii) FPGA-accelerated
+compression (3-4×ratio) and address translation, and (iv) seamless
+integration with existing frameworks.
+The architecture consists of three components: the CXL Memory
+Manager for allocation and migration, the Speculative Prefetcher us-
+ing lightweight models for prediction, and the FPGA Cache Engine
+implementing compression/decompression pipelines at >800MHz.
+Our evaluations on LLM workloads (7B-70B parameters) show:
+3.2×higher throughput enabling 4-8×larger batches, 8% per-token
+latency overhead, 2.8×memory cost reduction, 99.5% accuracy
+preservation, and 87% parallel efficiency at 8 GPUs. The approach
+potentially reduces infrastructure costs by 30-40% for memory-
+bound workloads.
+The contributions of this work are summarized as follows:
+• We propose the first CXL-based disaggregated memory archi-
+tecture specifically designed for LLM KV-cache management,
+demonstrating the viability and benefits of memory pooling
+for inference workloads.
+• We introduce novel speculative prefetching algorithms that
+exploit the predictable patterns in autoregressive token gen-
+eration, achieving high prediction accuracy while maintain-
+ing low computational overhead.
+• We design and implement efficient FPGA accelerators for KV-
+cache compression, decompression, and management, with
+arXiv:2512.11920v1  [cs.AI]  11 Dec 2025
+
+--- PAGE 2 ---
+FPGA ’26, February 22–24, 2026, Seaside, CA, USA Dong Liu and Yanxuan Yu
+detailed architectural descriptions and resource utilization
+analysis.
+• We develop a complete system prototype integrated with
+popular LLM serving frameworks (vLLM, TensorRT-LLM),
+demonstrating practical deployment feasibility and real-world
+performance benefits.
+• We conduct extensive evaluations across multiple LLM mod-
+els and workload patterns, providing insights into the per-
+formance characteristics, bottlenecks, and optimization op-
+portunities of disaggregated memory architectures for LLM
+serving.
+The remainder of this paper is organized as follows. Section 2
+reviews related work in LLM serving optimization, memory disag-
+gregation, and FPGA acceleration. Section 3 presents the detailed
+architecture of CXL-SpecKV, including the memory management
+framework, speculative prefetching mechanisms, and FPGA cache
+engine design. Section 4 describes our experimental methodology
+and presents comprehensive performance evaluations. Finally, Sec-
+tion 5 concludes with a discussion of future research directions and
+broader implications for datacenter AI infrastructure.
+2 Related Work
+Our work builds upon and extends research in several key areas:
+LLM serving optimization, memory disaggregation technologies,
+FPGA-based acceleration, and speculative execution techniques.
+We discuss the most relevant prior work and highlight how CXL-
+SpecKV differs from and improves upon existing approaches.
+2.1 LLM Serving and KV-Cache Optimization
+The challenge of efficiently serving large language models has
+received significant attention from both industry and academia.
+vLLM [19] introduces PagedAttention, which organizes KV-caches
+in paged memory blocks to reduce fragmentation and improve
+memory utilization. However, vLLM is fundamentally limited by
+GPU memory capacity and does not address the bandwidth bottle-
+necks of memory disaggregation. FlexGen [41] explores offloading
+strategies between GPU, CPU, and disk storage, but suffers from
+the high latency of PCIe transfers (typically 8-12GB/s) compared to
+GPU HBM bandwidth (>2TB/s). Our CXL-based approach achieves
+significantly lower latency and higher bandwidth than PCIe-based
+offloading.
+DeepSpeed-Inference [4] and FasterTransformer [32] provide
+optimized inference kernels and tensor parallelism strategies, but do
+not fundamentally address memory capacity constraints. Orca [50]
+introduces iteration-level scheduling to maximize batch size and
+throughput, yet remains constrained by available GPU memory.
+TinyServe [26] proposes query-aware cache selection strategies for
+efficient LLM serving, optimizing cache utilization based on query
+characteristics. In contrast, CXL-SpecKV effectively expands the
+memory capacity available for KV-caching by 4-8×, enabling larger
+batch sizes than any GPU-only approach.
+Long-context optimization techniques typically improve atten-
+tion efficiency through algorithmic sparsification or representation
+compression. Methods such as GQA [3], MKA [28],𝜋-Attention [25],
+and MLA [23] reduce memory consumption per token but do not ad-
+dress hardware-level constraints in memory capacity or bandwidth.
+CXL-SpecKV improves long-context processing from another per-
+spective by enabling disaggregated memory expansion.
+Recent work on KV-cache compression includes quantization-
+based methods [16, 29] that reduce precision from FP16 to INT8
+or INT4, achieving 2-4×compression at the cost of some accu-
+racy degradation. LLMEasyQuant [ 24] proposes scalable quanti-
+zation techniques for parallel and distributed LLM inference, ad-
+dressing quantization challenges in multi-GPU settings. H2O [52]
+proposes evicting less important KV-cache entries based on at-
+tention scores, while StreamingLLM [48] maintains only a sliding
+window of recent tokens. These techniques are complementary to
+our approach—CXL-SpecKV can leverage compression algorithms
+while additionally providing memory capacity expansion through
+disaggregation. Moreover, our FPGA-based compression engine
+can perform these operations without consuming GPU compute
+resources.
+2.2 Memory Disaggregation and CXL
+Memory disaggregation has been extensively studied in the con-
+text of datacenter resource management [ 1, 22, 40]. Traditional
+approaches use RDMA over InfiniBand or Ethernet, achieving laten-
+cies of 1-5𝜇s but requiring complex software stacks. CXL [11] rep-
+resents a paradigm shift by providing cache-coherent, low-latency
+(sub-microsecond) memory access through a standardized PCIe-
+based protocol.
+Recent work has begun exploring CXL for various applications.
+TPP [13] demonstrates CXL memory pooling for database work-
+loads, while Pond [39] proposes CXL-based memory expansion for
+containerized applications. However, these works focus on general-
+purpose memory disaggregation and do not address the specific
+challenges of LLM serving, such as the need for speculative prefetch-
+ing and the unique access patterns of KV-caches. To the best of our
+knowledge, CXL-SpecKV is the first work to architect a CXL-based
+system specifically optimized for LLM KV-cache management.
+Several recent papers have explored CXL memory for ML work-
+loads. CXL-ANNS [17] uses CXL memory for approximate nearest
+neighbor search in embedding databases, while CXL-MEM [ 21]
+studies CXL memory for training large models. However, these
+works do not address the inference-specific challenges of autore-
+gressive decoding and KV-cache management. Our speculative
+prefetching mechanisms are specifically designed to hide CXL ac-
+cess latency for sequential token generation patterns.
+2.3 FPGA Acceleration for Deep Learning
+FPGA architectures have evolved significantly to support efficient
+deep learning acceleration. Intel’s Stratix and Agilex FPGAs [12]
+integrate tensor processing blocks and high-bandwidth memory
+(HBM), while Xilinx Versal ACAPs [49] combine programmable
+logic with AI engines. Academic research has proposed various
+FPGA-based accelerators for CNNs [36, 51] and transformers [14,
+35].
+Recent work has explored FPGA acceleration specifically for
+sparse and structured computations. The systolic sparse tensor
+(SST) slices proposed in [43] demonstrate efficient structured spar-
+sity support in FPGA fabric, achieving significant speedups for
+
+--- PAGE 3 ---
+CXL-SpecKV: A Disaggregated FPGA Speculative KV-Cache for Datacenter LLM Serving FPGA ’26, February 22–24, 2026, Seaside, CA, USA
+sparse matrix operations. While our work does not directly lever-
+age structured sparsity (KV-caches are typically dense), we adopt
+similar design principles for building efficient systolic arrays in our
+FPGA cache engine. Additionally, we benefit from the advances in
+FPGA DSP blocks and high-bandwidth memory interfaces described
+in [43].
+Prior work on FPGA-based memory controllers includes spe-
+cialized designs for DRAM scheduling [ 6] and NVM access [ 42].
+However, these works do not address the specific requirements
+of LLM KV-cache management, such as the need for compres-
+sion/decompression, speculative prefetching, and integration with
+CXL protocols. Our FPGA cache engine implements a complete
+pipeline optimized for transformer KV-cache patterns.
+2.4 Speculative Execution for LLMs
+Speculative decoding has emerged as a promising technique to
+accelerate LLM inference. Leviathan et al. [ 20] propose using a
+smaller draft model to generate candidate tokens that are verified
+by the target model in parallel. Medusa [8] extends this approach
+with multiple decoding heads to predict multiple tokens simultane-
+ously. SpecInfer [30] introduces a speculative inference system that
+adaptively selects draft models based on workload characteristics.
+CSV-Decode [27] introduces certifiable sub-vocabulary decoding to
+improve inference efficiency through optimized token generation.
+While these techniques improve computational efficiency, they
+do not address memory constraints—in fact, speculative decoding
+often increases memory pressure by maintaining multiple KV-cache
+versions for candidate sequences. CXL-SpecKV takes a different
+approach: instead of speculating on token values, we speculate on
+which KV-cache entries will be needed next and prefetch them
+from disaggregated memory. This is complementary to algorithmic
+speculative decoding and can be combined with such techniques
+for further performance improvements.
+Prefetching strategies for neural network inference have been
+explored in [ 15, 34], but primarily focus on weight prefetching
+for CNN inference. The autoregressive nature of LLM decoding
+presents unique challenges: access patterns depend on generated
+content and are thus data-dependent. Our speculative prefetcher
+uses lightweight sequence models trained on token generation
+traces to predict future cache accesses with high accuracy.
+CXL-SpecKV is the first to combine CXL memory disaggregation,
+FPGA-accelerated compression, and speculative prefetching for
+LLM serving, achieving 3.2×throughput and 2.8×memory cost
+reduction with 95% prefetch accuracy.
+3 Architecture & Design Overview
+In this section, we present the detailed architecture of CXL-SpecKV,
+a disaggregated KV-cache system that leverages CXL interconnects
+and FPGA accelerators to enable efficient large-scale LLM serving.
+We begin with an overview of KV-cache characteristics and memory
+access patterns in Section 3.1, followed by the system architecture
+in Section 3.2. We then describe the CXL memory management
+framework in Section 3.3, the speculative prefetching mechanism
+in Section 3.4, and the FPGA cache engine design in Section 3.5.
+Finally, we discuss system integration and optimization strategies
+in Section 3.6.
+3.1 KV-Cache Analysis and Memory Access
+Patterns
+For transformer with𝐿 layers, hidden dimension𝑑ℎ, and𝐻 attention
+heads, each token generates KV tensors(𝐻,𝑑ℎ/𝐻) per layer. Total
+memory requirement for batch𝐵 with max sequence𝑆𝑚𝑎𝑥 is𝑀𝐾𝑉 =
+2·𝐿·𝐵·𝑆 𝑚𝑎𝑥·𝑑ℎ·𝑃𝑏𝑖𝑡𝑠 where𝑃𝑏𝑖𝑡𝑠 is precision. For LLaMA-2 70B
+(𝐿= 80,𝑑ℎ = 8192,𝐵= 32,𝑆𝑚𝑎𝑥 = 2048, FP16), this yields 640GB,
+exceeding A100’s 80GB capacity.
+Profiling reveals key characteristics exploitable by CXL-SpecKV:
+(i)sequential temporal localitywith token 𝑡 accessing positions
+[0,𝑡− 1] enabling predictive prefetching, (ii)layer-wise independence
+allowing pipelined per-layer processing, (iii)read-heavy workload
+with read/write ratioR𝑟/𝑤≈𝑆 : 1favoring caching, (iv)value clus-
+teringnear zero enabling INT8 quantization with > 99%accuracy
+andR𝑐 = 2×, (v)spatial correlationin attention heads exploitable
+via delta encoding𝛿𝑖 =𝑥 𝑖−𝑥𝑖−1 , and (vi)layer-specific compress-
+ibilitywith early layers achieving R𝑐(ℓ<𝐿/ 3)∈[ 3, 4] and late
+layersR𝑐(ℓ> 2𝐿/3)∈[ 2.5, 3]. These inform CXL-SpecKV’s specu-
+lative prefetching, pipelined compression, and adaptive layer-wise
+algorithm selection.
+3.2 System Architecture Overview
+The CXL-SpecKV system comprises four main components:
+GPU Inference Engine:The GPU hosts the transformer model
+weights and executes the forward pass for token generation. It
+maintains a small local KV-cache for recently accessed entries (typ-
+ically the most recent 128-256 tokens) to maximize cache hit rates
+for hot data.
+CXL Memory Pool:Large-capacity FPGA-attached memory
+(64-256GB per device) connected via CXL 2.0 interface provides
+the main KV-cache storage. This memory is organized as a cache-
+coherent shared resource accessible to both GPU and FPGA with
+latencies of 200-400ns.
+FPGA Cache Engine:A custom FPGA accelerator implements
+the compression/decompression pipeline, address translation, and
+cache management logic. The cache engine operates at 800MHz
+and achieves throughput of 1.6TB/s, matching the bandwidth of
+HBM2E memory.
+Speculative Prefetcher:A lightweight prediction module run-
+ning on the FPGA predicts future token sequences and preloads
+their corresponding KV-cache entries. The prefetcher uses a small
+(128KB) LSTM model achieving <10𝜇s prediction latency.
+The components interact as follows: When the GPU generates
+a new token, it sends a prefetch hint to the speculative prefetcher,
+which predicts the next𝑘 tokens (typically𝑘= 4−8). The prefetcher
+initiates DMA transfers to move predicted KV-cache entries from
+CXL memory to GPU-accessible buffers. Meanwhile, the newly
+generated token’s KV-cache is computed and stored. By the time
+the next token generation begins, its required KV-cache entries
+are already present in GPU memory with high probability (95% hit
+rate), effectively hiding the CXL access latency.
+3.3 CXL Memory Management Framework
+The CXL memory management framework orchestrates the alloca-
+tion, migration, and coherence of KV-cache data across GPU local
+memory and FPGA-attached CXL memory pools.
+
+--- PAGE 4 ---
+FPGA ’26, February 22–24, 2026, Seaside, CA, USA Dong Liu and Yanxuan Yu
+3.3.1 Memory Hierarchy and Allocation.CXL-SpecKV implements
+a three-tier memory hierarchy:
+L1: GPU Local Cache (8-16GB):Stores the most recently ac-
+cessed KV-cache entries for the current decoding step. Organized
+as a fully associative cache with LRU replacement policy.
+L2: Prefetch Buffer (2-4GB):GPU-side buffer for speculated
+KV-cache entries being transferred from CXL memory. Implements
+double buffering to overlap data transfer with computation.
+L3: CXL Memory Pool (64-256GB):Main KV-cache storage
+on FPGA-attached memory. Organized in 4KB pages to match CXL
+memory transaction sizes and enable efficient prefetching.
+Memory allocation follows a demand-driven policy. When a
+new inference request arrives, the system allocates KV-cache pages
+in L3 (CXL memory). As tokens are generated, recent entries are
+promoted to L1 based on access frequency and recency. The prefetch
+buffer (L2) serves as an intermediate staging area, receiving prefetched
+data asynchronously.
+3.3.2 Cache Coherence Protocol.CXL 2.0’s built-in cache coher-
+ence mechanisms ensure consistency between GPU and FPGA
+views of memory. We leverage the CXL.cache and CXL.mem proto-
+cols as follows:
+Read Path:GPU read requests first check L1 local cache. On
+miss, the request is forwarded to the CXL home agent (running
+on FPGA), which checks its directory and either serves from CXL
+memory or initiates coherence actions if needed.
+Write Path:When new KV-cache entries are generated, the
+GPU writes to L1 and sends invalidation messages via CXL.cache
+protocol. The FPGA directory controller maintains coherence state
+and schedules writeback to CXL memory during idle cycles.
+Prefetch Path:Speculative prefetches bypass the coherence
+protocol by directly accessing CXL memory in read-only mode,
+reducing protocol overhead. If prefetched data is later invalidated,
+the prefetch buffer entry is simply discarded.
+3.3.3 Page Migration and Placement.To optimize for common ac-
+cess patterns, we implement adaptive page migration policies:
+Hot-Cold Classification:Pages are classified as hot (accessed
+in the last𝑁 tokens) or cold based on access tracking. Hot pages
+are preferentially kept in L1/L2, while cold pages reside in L3.
+Layer-aware Placement:KV-cache pages from different trans-
+former layers are placed in separate memory regions to enable par-
+allel access and reduce bank conflicts in CXL memory controllers.
+Batch-aware Migration:For batch inference, pages from dif-
+ferent requests are interleaved in memory to enable efficient burst
+transfers and maximize CXL link utilization.
+The migration policy uses a simple threshold-based algorithm:
+pages with access count above threshold 𝑇ℎ are promoted to L1,
+while pages with count below𝑇𝑐 are demoted to L3. Thresholds are
+dynamically adjusted based on memory pressure and miss rates.
+3.4 Speculative Prefetching Mechanism
+The speculative prefetcher predicts future token sequences and
+preloads their KV-cache entries to hide CXL access latency. This
+is the key innovation that enables CXL-SpecKV to achieve perfor-
+mance competitive with GPU-local memory despite the inherent
+latency of memory disaggregation.
+Algorithm 1Speculative KV-Cache Prefetching
+1:Input:Token historyH 𝑡 ={𝑡−15,...,𝑡 0}, layer𝑙, depth𝑘
+2:Output:Prefetched KV entries in L2 buffer
+3:{ ˆ𝑡1,..., ˆ𝑡𝑘}←PredictTokens(H 𝑡 ) {LSTM inference}
+4:for𝑖=1to𝑘do
+5:A 𝑣𝑖𝑟𝑡←(reqID,𝑙,pos+𝑖)
+6:A 𝑝ℎ𝑦𝑠←TranslateAddress(A𝑣𝑖𝑟𝑡 ) {ATU lookup}
+7:ifA 𝑝ℎ𝑦𝑠 ∉L1∪L2then
+8:IssueDMA(A 𝑝ℎ𝑦𝑠 , L2[𝑖]) {Non-blocking}
+9:end if
+10:end for
+11:W aitCompletion() {Ω𝑚𝑎𝑥 concurrent DMAs}
+12:returnNotifyGPU(ready)
+3.4.1 Prediction Model Architecture.The prefetcher uses a light-
+weight LSTM-based sequence model trained to predict the next𝑘
+tokens given the recent generation history. The model architecture
+consists of:
+• Input Layer:Embeds the last 16 generated token IDs into
+64-dimensional vectors (total 1024 dimensions).
+• LSTM Layer:2-layer LSTM with 128 hidden units per layer,
+capturing temporal dependencies in token sequences.
+• Output Layer:Produces top-𝑘 token predictions with con-
+fidence scores, using beam search with width 4.
+The entire model contains only 128K parameters (512KB in FP16),
+enabling fast inference on the FPGA at <10𝜇s per prediction. The
+model is trained offline on representative workload traces and
+achieves 95% top-4 accuracy on held-out test sets.
+3.4.2 Prefetch Scheduling and Execution.Upon token 𝑡 generation,
+GPU issues prefetch with history H𝑡 ={𝑡 𝑖}𝑡
+𝑖=𝑡−15 . Algorithm 1
+shows the pipeline with end-to-end latency:
+𝐿𝑝𝑟𝑒𝑓𝑒𝑡𝑐ℎ =𝐿𝑝𝑟𝑒𝑑+𝐿𝐴𝑇𝑈+𝐿𝐷𝑀𝐴 =64+4+12=80cycles(<10𝜇s)
+(1)
+where LSTM inference dominates at 𝐿𝑝𝑟𝑒𝑑 = 64cycles. The CXL
+controller’s outstanding request window Ω𝑚𝑎𝑥 = 16enables over-
+lapped execution, achieving effective throughputΘ𝑒𝑓𝑓 =min
+
+Ω𝑚𝑎𝑥
+𝐿𝐷𝑀𝐴, 𝐵𝑊𝐶𝑋𝐿
+𝑆𝑒𝑛𝑡𝑟𝑦
+
+·
+𝑓𝑐𝑙𝑘 where entry size𝑆𝑒𝑛𝑡𝑟𝑦 = 4KB. For request rate𝜆𝑟𝑒𝑞 , the system
+maintains stability when𝜆𝑟𝑒𝑞·𝑘·𝑆 𝑒𝑛𝑡𝑟𝑦 <𝐵𝑊𝐶𝑋𝐿·𝐻 𝑝𝑟𝑒𝑑 where
+𝐻𝑝𝑟𝑒𝑑 =0.95is prediction hit rate.
+3.4.3 Misprediction Handling.When the actual generated token
+differs from predictions, the corresponding prefetched KV-cache
+entries become invalid. To handle mispredictions efficiently:
+Lazy Invalidation:Invalid prefetch buffer entries are not im-
+mediately evicted. Instead, they are overwritten by new prefetches
+or naturally evicted when the buffer fills.
+Fallback Path:On prefetch miss (actual token not among pre-
+dicted tokens), the system falls back to synchronous fetch from CXL
+memory. This incurs latency penalty but maintains correctness.
+Adaptive Prediction:The prefetcher tracks prediction accu-
+racy per request and adjusts𝑘 (number of predictions) dynamically.
+High-accuracy requests use larger𝑘 for more aggressive prefetch-
+ing, while low-accuracy requests use smaller𝑘 to reduce wasted
+bandwidth.
+
+--- PAGE 5 ---
+CXL-SpecKV: A Disaggregated FPGA Speculative KV-Cache for Datacenter LLM Serving FPGA ’26, February 22–24, 2026, Seaside, CA, USA
+3.4.4 Multi-Layer Prefetching.Since transformer models process
+layers sequentially, we implement pipelined prefetching across
+layers. When layer𝑙 is processing token𝑡, the prefetcher simulta-
+neously loads KV-caches for layers𝑙+ 1and 𝑙+ 2. This pipeline
+parallelism further reduces effective latency:
+𝑇𝑒𝑓𝑓𝑒𝑐𝑡𝑖𝑣𝑒 =𝑇𝑐𝑜𝑚𝑝𝑢𝑡𝑒+max(𝑇𝑝𝑟𝑒𝑓𝑒𝑡𝑐ℎ −2×𝑇 𝑙𝑎𝑦𝑒𝑟,0)(2)
+where𝑇𝑙𝑎𝑦𝑒𝑟 is the per-layer computation time. In practice,𝑇𝑝𝑟𝑒𝑓𝑒𝑡𝑐ℎ <
+2×𝑇𝑙𝑎𝑦𝑒𝑟 for most models, resulting in near-zero effective latency
+overhead.
+3.5 FPGA Cache Engine Design
+The FPGA cache engine implements the core datapath for KV-cache
+compression, decompression, address translation, and memory man-
+agement. We architect the engine as a parameterizable pipeline that
+can be synthesized for different FPGA platforms and scaled to vari-
+ous throughput requirements.
+3.5.1 High-Level Architecture.The engine comprises five mod-
+ules interconnected via AXI-Stream (𝑊𝑑𝑎𝑡𝑎 = 512bits, 𝑓𝑐𝑙𝑘 = 800
+MHz): (i)ATUperforms virtual-to-physical address translation Φ :
+A𝑣𝑖𝑟𝑡→A 𝑝ℎ𝑦𝑠 with latency𝐿𝐴𝑇𝑈 =𝐿𝑇𝐿𝐵−ℎ𝑖𝑡 +( 1−𝐻𝑇𝐿𝐵)·𝐿 𝑤𝑎𝑙𝑘
+where TLB hit rate 𝐻𝑇𝐿𝐵 > 0.92and page walk latency 𝐿𝑤𝑎𝑙𝑘 =
+15cycles, (ii)Compression Engineimplements Π𝑐𝑜𝑚𝑝 : R𝑁×𝑑 →
+Z𝑀 achieving bandwidth 𝐵𝑊𝑐𝑜𝑚𝑝 =𝑊 𝑑𝑎𝑡𝑎·𝑓 𝑐𝑙𝑘/8 = 51.2GB/s,
+(iii)Decompression Enginewith inverse mapping Π−1
+𝑐𝑜𝑚𝑝 and crit-
+ical path 𝐿𝑐𝑟𝑖𝑡 = 25cycles through multiplier trees, (iv)Memory
+Controllermanaging 𝐶𝐻𝐵𝑀 = 16channels with aggregate band-
+width𝐵𝑊𝐻𝐵𝑀 = Í𝐶𝐻𝐵𝑀
+𝑖=1 𝐵𝑊𝑖 = 1.6TB/s under bank conflict rate
+𝜌𝑐𝑜𝑛𝑓𝑙𝑖𝑐𝑡 < 0.08, and (v)DMA Enginesupporting scatter-gather with
+maximum outstanding requests Ω𝑚𝑎𝑥 = 16. The FPGA RTL was
+generated using Intel HLS with pipeline directives and resource
+constraints to optimize throughput. Each module interfaces with
+Intel CXL IP v1.2 in cache mode with AXI interconnect, and we
+implement a custom DMA queue for cacheline-level coherency
+tracking. The compression engine is a 4-stage Verilog RTL pipeline
+attached to a CXL.cache controller that maintains coherence.
+3.5.2 Compression Pipeline Design.Algorithm 2 shows the com-
+pression datapath. The𝐷𝑝𝑖𝑝𝑒 = 20stage fully-pipelined architecture
+achieves throughput Θ𝑐𝑜𝑚𝑝 = 𝑊𝑑𝑎𝑡𝑎·𝑓𝑐𝑙𝑘
+8 ·𝐼𝐼 −1 = 51.2GB/s per in-
+stance (initiation interval𝐼𝐼= 1), with compression ratioR𝑐(ℓ)=
+E[|𝐷 ℓ
+𝑜𝑟𝑖𝑔|]
+E[|𝐷 ℓ𝑐𝑜𝑚𝑝|] varying per layer ℓ∈[ 1,𝐿] whereR𝑐∈[ 2.5, 4.0] and
+¯R𝑐 = 1
+𝐿
+Í𝐿
+ℓ=1R𝑐(ℓ)= 3.2. Pipeline utilization𝑈𝑝𝑖𝑝𝑒 =
+𝑇𝑏𝑢𝑠𝑦
+𝑇𝑡𝑜𝑡𝑎𝑙
+> 0.98
+under continuous streaming.
+3.5.3 Decompression Pipeline Design.The inverse transformation
+Π−1
+𝑐𝑜𝑚𝑝 : Z𝑀→R 𝑁×𝑑 implements𝐷𝑝𝑖𝑝𝑒 = 20stages with critical
+path:
+𝐿𝑐𝑟𝑖𝑡 =max
+𝑠∈𝑆𝑝𝑖𝑝𝑒
+ 
+𝐿(𝑠)
+𝑙𝑜𝑔𝑖𝑐+
+𝑠−1∑︁
+𝑠′=1
+𝐿𝑓𝑓
+!
+=25cycles (3)
+where𝐿𝑓𝑓 = 1cycle per flip-flop and 𝐿(𝑠)
+𝑙𝑜𝑔𝑖𝑐 is stage 𝑠 combina-
+tional delay. The bottleneck resides in dequantization multipliers
+(stages 15-18) with𝐿𝑚𝑢𝑙𝑡 = 3DSP cascades. Throughput Θ𝑑𝑒𝑐𝑜𝑚𝑝 =
+Algorithm 2KV-Cache Compression
+1:Input:KV pageX∈R 𝑁×𝑑 (FP16)
+2:Output:Compressed𝐷 𝑐𝑜𝑚𝑝 =⟨𝑠,𝐷 𝑅𝐿𝐸⟩
+3:𝑠←max(|X|)/127{Stages 5-8: Scaling}
+4:for𝑗=1to𝑁do
+5:for𝑖=1to𝑑do
+6:𝑥 𝑖𝑛𝑡8
+𝑗,𝑖 ←⌊𝑥 𝑗,𝑖·𝑠−1·127⌉
+7:end for
+8:end for
+9:{Stages 9-14: Delta encoding}
+10:for𝑗=1to𝑁do
+11:for𝑖=2to𝑑do
+12:𝛿 𝑗,𝑖←𝑥 𝑖𝑛𝑡8
+𝑗,𝑖 −𝑥 𝑖𝑛𝑡8
+𝑗,𝑖−1
+13:end for
+14:end for
+15:𝐷 𝑅𝐿𝐸←RunLengthEncode({𝛿 𝑗,𝑖}) {Stages 15-18}
+16:return⟨𝑠,𝐷 𝑅𝐿𝐸⟩
+Table 1: FPGA cache engine resource utilization on Agilex-7
+FPGA.
+Resource Used Total (%)
+ALMs 284,563 933,120 (30.5%)
+Registers 521,847 3,732,480 (14.0%)
+M20K Memory Blocks 1,856 11,721 (15.8%)
+DSP Blocks 1,024 3,960 (25.9%)
+Maximum Frequency 812 MHz
+Θ𝑐𝑜𝑚𝑝 = 51.2GB/s maintains 𝐼𝐼= 1. Early-exit bypasses uncom-
+pressed data (𝛼≈ 0.3of traffic) with latency 𝐿𝑏𝑦𝑝𝑎𝑠𝑠 = 5cycles,
+achieving weighted average ¯𝐿𝑑𝑒𝑐𝑜𝑚𝑝 =( 1−𝛼)·𝐿𝑐𝑟𝑖𝑡+𝛼·𝐿𝑏𝑦𝑝𝑎𝑠𝑠 ≈ 19
+cycles.
+3.5.4 Resource Utilization and Timing.Table 1 quantifies FPGA
+resource consumption. Post-place-and-route timing analysis yields
+maximum frequency 𝑓𝑚𝑎𝑥 = 812MHz with timing slack 𝜏𝑠𝑙𝑎𝑐𝑘 =
+𝑇𝑐𝑙𝑘−𝑇𝑐𝑟𝑖𝑡 = 0.23ns where clock period 𝑇𝑐𝑙𝑘 = 1.23ns and critical
+path delay𝑇𝑐𝑟𝑖𝑡 =1.0ns. Resource utilization follows:
+𝑈𝑡𝑦𝑝𝑒 =
+𝑅𝑡𝑦𝑝𝑒
+𝑢𝑠𝑒𝑑
+𝑅𝑡𝑦𝑝𝑒
+𝑡𝑜𝑡𝑎𝑙
+,∀𝑡𝑦𝑝𝑒∈{ALM, REG, M20K, DSP}(4)
+achieving𝑈𝐴𝐿𝑀 = 0.305,𝑈𝑅𝐸𝐺 = 0.140,𝑈𝑀20𝐾 = 0.158,𝑈𝐷𝑆𝑃 =
+0.259. The utilization vectorU =[𝑈 𝐴𝐿𝑀,𝑈𝑅𝐸𝐺,𝑈𝑀20𝐾,𝑈𝐷𝑆𝑃]𝑇 sat-
+isfies constraint|| U||∞ < 0.35, ensuring sufficient headroom for
+𝑁𝑚𝑎𝑥 =3additional engines per FPGA.
+The critical path runs through the dequantization multipliers
+in the decompression pipeline, achieving 812MHz on the Agilex-7
+(exceeding our 800MHz target). The design uses approximately 30%
+of ALM logic, 26% of DSP blocks for arithmetic operations, and 16%
+of M20K memory for buffering and TLB storage.
+3.5.5 Multi-Engine Scaling.For throughput scaling, we instantiate
+𝑁 engine instances with disjoint address partitions{A(𝑖)
+𝑝ℎ𝑦𝑠}𝑁
+𝑖=1 sat-
+isfying Ð𝑁
+𝑖=1A(𝑖)
+𝑝ℎ𝑦𝑠 =A 𝑝ℎ𝑦𝑠 andA(𝑖)
+𝑝ℎ𝑦𝑠∩A(𝑗)
+𝑝ℎ𝑦𝑠 =∅ for𝑖≠𝑗 . The

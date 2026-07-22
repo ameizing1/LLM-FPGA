@@ -1,0 +1,511 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\High-Performance_Accurate_and_Approximate_Multipliers_for_FPGA-Based_Hardware_Accelerators - TCAD22.pdf
+PAGES: 14
+--- PAGE 1 ---
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 2, FEBRUARY 2022 211
+High-Performance Accurate and Approximate
+Multipliers for FPGA-Based Hardware Accelerators
+Salim Ullah , Semeen Rehman, Muhammad Shaﬁque , Senior Member, IEEE,
+and Akash Kumar , Senior Member, IEEE
+Abstract—Multiplication is one of the widely used arithmetic
+operations in a variety of applications, such as image/video
+processing and machine learning. FPGA vendors provide high-
+performance multipliers in the form of DSP blocks. These
+multipliers are not only limited in number and have ﬁxed loca-
+tions on FPGAs but can also create additional routing delays
+and may prove inefﬁcient for smaller bit-width multiplications.
+Therefore, FPGA vendors additionally provide optimized soft
+IP cores for multiplication. However, in this work, we advocate
+that these soft multiplier IP cores for FPGAs still need bet-
+ter designs to provide high-performance and resource efﬁciency.
+Toward this, we present generic area-optimized, low-latency accu-
+rate, and approximate softcore multiplier architectures, which
+exploit the underlying architectural features of FPGAs, i.e.,
+lookup table (LUT) structures and fast-carry chains to reduce
+the overall critical path delay (CPD) and resource utilization of
+multipliers. Compared to Xilinx multiplier LogiCORE IP, our
+proposed unsigned and signed accurate architecture provides
+up to 25% and 53% reduction in LUT utilization, respectively,
+for different sizes of multipliers. Moreover, with our unsigned
+approximate multiplier architectures, a reduction of up to 51%
+in the CPD can be achieved with an insigniﬁcant loss in output
+accuracy when compared with the LogiCORE IP. For illustra-
+tion, we have deployed the proposed multiplier architecture in
+accelerators used in image and video applications, and eval-
+uated them for area and performance gains. Our library of
+accurate and approximate multipliers is opensource and avail-
+able online at https://cfaed.tu-dresden.de/pd-downloads to fuel
+further research and development in this area, facilitate repro-
+ducible research, and thereby enabling a new research direction
+for the FPGA community.
+Index Terms —Accelerators, approximate computing, high
+performance, multipliers, neural networks, reduced area.
+I. I NTRODUCTION
+M
+ULTIPLICATION is one of the basic arithmetic opera-
+tions used extensively in the domain of digital signal
+and image processing. FPGA vendors, such as Xilinx and
+Manuscript received June 19, 2020; revised November 10, 2020 and
+December 30, 2020; accepted January 16, 2021. Date of publication
+February 2, 2021; date of current version January 20, 2022. This work was
+supported by the German Research Foundation (DFG) funded Project ReAp
+under Grant 380524764. This article was recommended by Associate Editor
+S. Reda. (Corresponding author: Akash Kumar.)
+Salim Ullah and Akash Kumar are with the Chair for Processor
+Design, Technische Universität Dresden, 01062 Dresden, Germany (e-mail:
+salim.ullah@tu-dresden.de; akash.kumar@tu-dresden.de).
+Semeen Rehman is with the Institute of Computer Technology,
+Technische Universität Wien, 1040 Vienna, Austria (e-mail:
+semeen.rehman@tuwien.ac.at).
+Muhammad Shaﬁque is with the Division of Engineering,
+New York University Abu Dhabi, Abu Dhabi, UAE (e-mail:
+muhammad.shaﬁque@nyu.edu).
+Digital Object Identiﬁer 10.1109/TCAD.2021.3056337
+TABLE I
+C
+OMPARISON OF LOGIC VERSUS DSP B LOCK -BASED IMPLEMENTATIONS
+FOR THE REED -SOLOMON DECODER AND JPEG E NCODER
+Intel, provide DSP blocks to achieve fast multipliers [1].
+Despite the high performance offered by these DSP blocks,
+their usage might not be efﬁcient in terms of the overall
+performance and area requirements for some applications.
+Table I compares the critical path delays (CPDs) and lookup
+tables (LUTs) utilization of two different implementations
+of the Reed–Solomon and JPEG encoders
+1 for the Virtex-7
+series FPGA using Xilinx Vivado. The routing delay caused
+by the location of the allocated DSP blocks has resulted in a
+higher latency for the DSP-based implementation of the Reed-
+Solomon encoder. For small applications, it may be possible
+to perform manual Floorplanning to optimize an applica-
+tion’s overall performance. However, for complex applications
+with contending requirements for FPGA resources, it may
+not be possible to optimize the placement of the required
+FPGA resources manually to enhance performance gains.
+Similarly, the implementation of the JPEG-encoder shows a
+large number of DSP blocks (56% of the total available DSP
+blocks) utilization. Such applications can exhaust the avail-
+able DSP blocks, making them less available/unavailable for
+performance-critical operations of other applications executing
+concurrently on the same FPGA, and thereby necessitating
+the LUT-based multipliers. Similar results about the DSP
+blocks utilization and overall application performance are also
+reported by [41]. Therefore, the orthogonal approach of hav-
+ing logic-based soft multipliers along with DSP blocks is
+important for obtaining overall performance gains in differ-
+ent implementation scenarios. That is, why Xilinx and Intel
+also provide logic-based soft multipliers [2], [3].
+Techniques like [4]–[7] present the modular approach
+of designing bigger FPGA-based multipliers using smaller
+blocks. However, such techniques prove to be useful for
+relatively smaller bit-width multipliers; and for the rela-
+tively higher bit-width multipliers, they consume more FPGA
+resources. For example, the logic-based implementation of an
+accurate 8 × 8 multiplier on Virtex-7 FPGA using Vivado,
+with default synthesis options, consumes 71 LUTs. Whereas,
+the modular implementation of an accurate 8 × 8 multiplier
+using accurate 4 × 4 multipliers consumes 82 LUTs.
+1Source codes from http://opencores.org/projects.
+1937-4151 © 2021 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: Shanghai Jiaotong University. Downloaded on March 25,2026 at 03:14:54 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 2 ---
+212 IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 2, FEBRUARY 2022
+Walters [8] and Kumm et al. [9] have used the modi-
+ﬁed Booth’s algorithm for area efﬁcient radix-4 multiplier
+implementations using 6-input LUTs and associated carry
+chains of Xilinx FPGAs. Their implementations avoid par-
+tial products (PPs) compressor trees and have large CPDs.
+Parandeh-Afshar and Ienne have also used Booth’s and Baugh-
+Wooley’s multiplication algorithms for area-efﬁcient multiplier
+implementation using Altera FPGAs [10]. However, to reduce
+the effective length of carry chains, their implementation lim-
+its the length of the adaptive logic modules (ALM) to 5,
+which results in the underutilization of the FPGA resources.
+Moreover, this feature of limiting the carry chain to ﬁve ALMs
+cannot be achieved without wasting resources, with the cur-
+rent FPGAs from other vendors, such as those provided by
+Xilinx [11]. Parandeh-Afshar et al. [12] have also proposed
+a PPs compressor tree using Altera FPGAs. However, their
+proposed implementation of generalized parallel counters
+(GPCs) underutilizes LUTs in two consecutive ALMs.
+Among the other available multiplier design options, the
+conventional shift-and-add [13], serial and serial/parallel
+multipliers address the low-area requirements but offer very
+high CPDs. The commonly used Wallace [14] and Dadda [15]
+design-based parallel multipliers have high area require-
+ments for achieving low output latencies by parallel addition
+of PPs. Considering the characteristics of the Booth and
+Wallace/Dadda multiplier schemes, a fast hybrid multiplier
+architecture using Radix-4 recoding has been proposed in [16]
+for ASIC-based systems. In this article, we show that the
+performance of these logic-based soft multipliers can be
+further improved by utilizing efﬁcient techniques for PPs
+encoding and their reduction. For example, compared to the
+multiplier implementation proposed in [9], our proposed accu-
+rate multiplier implementation offers a reduction of up to 52%
+in the CPD.
+As demonstrated by a large body of works, such as [17],
+[38], and [39], a wide range of applications do not require
+accurate intermediate computations and their operations can
+be approximated to further improve performance and energy
+efﬁciency. These applications have inherent resilience to
+approximation-induced errors and thereby demonstrate the
+ability to produce viable outputs despite some of the input-
+data/intermediate computation being incorrect or approx-
+imate. Examples of such applications can be found in
+the domains of image/signal processing, machine learning,
+and various other probabilistic algorithms. For the area-
+optimized and performance-efﬁcient hardware acceleration of
+such applications, both accurate and approximate multipliers
+can be utilized. Using the principles of approximate com-
+puting, works in [18]–[28] and [32] suggest the use of
+functional approximations for designing different types of
+approximate adders and multipliers with different performance
+gains.
+However, most of the state-of-the-art accurate and approx-
+imate multiplier architectures consider only ASIC-based
+systems. Due to the inherent architectural differences between
+FPGAs and ASICs, these ASIC-based multiplier designs
+provide limited or no performance gains when directly syn-
+thesized for the FPGA-based systems. To further emphasize
+the need for designing FPGA-based approximate modules, we
+present the following motivational case study comparing the
+efﬁciency of both ASIC-based and FPGA-based implementa-
+tions of state-of-the-art approximate multipliers that have been
+originally designed for ASIC-based systems.
+Fig. 1. Cross-platform comparison of area, latency, and EDP. Results are nor-
+malized to the corresponding results of ASIC-based and FPGA-based accurate
+multipliers.
+A. Motivational Case Study
+Fig. 1 compares the ASIC-based area, CPD, and energy-
+delay-product (EDP) of two state-of-the-art approximate
+multipliers, “ S1,” presented in [25], and “ S2,” described
+in [23], with their FPGA-based implementations. The ASIC-
+based implementation results have been obtained from the
+corresponding papers ([23] and [25]), whereas for the FPGA-
+based implementations, the Xilinx Vivado tool for the Virtex-7
+family has been used. Furthermore, to evaluate the efﬁcacy
+of the approximate designs, we have normalized these results
+to the implementation results of corresponding ASIC-based
+and FPGA-based accurate multipliers, respectively. As shown
+by the analysis results, the gains offered by the ASIC-based
+implementation are not proportionally translated to the cor-
+responding FPGA-based implementation. For example, the
+area and EDP gains offered by S1 and S2 are reduced for
+the corresponding FPGA-based implementations—in fact, the
+approximate implementation of S1 consumes more FPGA
+resources than the corresponding accurate design. However,
+the CPD is further reduced for both FPGA-based imple-
+mentations. This lack of similar performance gains for the
+FPGA-based systems is the result of the architectural differ-
+ences between ASICs and FPGAs. In ASIC-based designs,
+logic gates are deployed for the implementations of differ-
+ent logic circuits; thus, a full control over resource utilization
+at a ﬁne granularity is possible. However, FPGA-based com-
+putational blocks are composed of entirely different entities,
+i.e., LUTs, where conﬁguration bits are used to implement an
+individual circuit. This poses a research challenge of deﬁning
+LUTs-based optimizations to implement accurate and approx-
+imate multipliers with signiﬁcant performance gains, which
+can help in the realization of efﬁcient FPGA-based hardware
+accelerators for error-resilient applications.
+B. Our Novel Contributions
+To address the above research challenge, we extend our
+prior work in [33] and present our methodology of deﬁn-
+ing the LUT-level optimization for implementing accurate and
+approximate multipliers for FPGA-based systems. The overall
+contributions of this article are as follows.
+1) Accurate Unsigned Multiplier Design: Utilizing the 6-
+input LUTs and associated fast-carry chains of the
+state-of-the-art FPGAs, we present a scalable, area-
+optimized, and reduced latency architecture of the
+accurate multiplier.
+2) Single Step PPs Generation and Their Addition :T h e
+proposed implementation of the accurate multiplier fuses
+the generation and mutual addition of two consecutive
+Authorized licensed use limited to: Shanghai Jiaotong University. Downloaded on March 25,2026 at 03:14:54 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 3 ---
+ULLAH et al.: HIGH-PERFORMANCE ACCURATE AND APPROXIMATE MULTIPLIERS FOR FPGA-BASED HARDW ARE ACCELERATORS 213
+Fig. 2. Summary of the proposed methodology.
+partial product rows into one stage. For an NMultiplicand×
+MMultiplier multiplier, it results in the concurrent gen-
+eration of ( N + 2)-bits long ⌈(M/2)⌉ processed PPs
+(PPP).
+3) Efﬁcient Partial Product Reduction Tree: For an N × M
+multiplier, our automated tool ﬂow organizes the PPPs
+in ⌈(M/6)⌉groups. Each group can contain a maximum
+of three PPPs. Using 6-input LUTs and the associ-
+ated carry chains, our methodology then deploys either
+ternary or binary adders for the mutual addition of PPPs
+in each group. The total number of stages required to
+ﬁnd ﬁnal accurate product is deﬁned by
+No. of stages =
+⌈
+log
+3
+( M
+2
+)⌉
++ 1. (1)
+4) Accurate Signed Multiplier: Utilizing the Baugh Wooley
+multiplication algorithm [37], we extend the “single-step
+PPs generation and their addition” technique to com-
+pute ⌈(M/2)⌉PPPs for an N × M signed multiplier. Our
+methodology adds the generated PPPs to compute the
+ﬁnal product by employing our proposed partial product
+reduction method.
+5) Approximate 4 × 2 Unsigned Multiplier as a build-
+ing block to implement higher-order approximate
+multipliers. The proposed approximate 4 × 2 multiplier
+completely utilizes the six inputs of an LUT of the
+state-of-the-art FPGAs.
+6) An Approximate 4 × 4 Unsigned Multiplier: To reduce
+the number of output errors, we perform different
+FPGA-speciﬁc optimizations on the approximate 4 × 2
+multiplier and generate an approximate and asymmetric
+4 × 4 multiplier.
+7) An approximate ternary adder for the summation of the
+generated approximate PPs.
+Fig. 2 presents an overview of our proposed method-
+ology in achieving these contributions. Using the primary
+logic resources of FPGAs (related preliminaries discussed
+in Section II), we present the accurate multiplier design in
+Section III. To reduce the multiplier CPD, we then analyze
+the utilized 3:1 compressors (ternary adders) and use var-
+ious LUT-level optimization techniques to design different
+Fig. 3. Xilinx FPGA slice structure [11]. (a) LUT6 structure. (b) Virtex 7
+carry chain.
+approximate multipliers in Sections V and VI. Finally, a thor-
+ough analysis of the output accuracy and performance gains
+of the proposed multipliers compared to the state-of-the-art
+multipliers is presented in Section VII. Our accurate and
+approximate architectures provide up to a 25% reduction in the
+total utilized LUTs when compared with the area-optimized
+Xilinx LogiCORE IP [2] for different sizes of multipliers.
+Moreover, the proposed approximate architecture achieves a
+reduction of up to 51% in the multiplier CPD when com-
+pared with the area-optimized LogiCORE IP. For the error
+characterization of our proposed multipliers, we have used the
+following quality metrics: 1) the number of error occurrences;
+2) maximum error magnitude; 3) average relative error; and
+4) number of maximum error occurrences. These metrics are
+commonly used by the literature for the quality analysis of
+approximate arithmetic circuits [22], [23], [29].
+The RTL and behavioral models of these accurate and
+approximate multipliers are opensource and available online
+at https://cfaed.tu-dresden.de/pd-downloads. This will not only
+facilitate reproducing the results but will also enable further
+research and development at higher abstraction layers.
+II. P
+RELIMINARIES
+A. Xilinx FPGA Slice Structure
+State-of-the-art FPGAs, such as those provided by Xilinx
+and Intel, utilize 6-input LUTs to implement combinational
+and sequential circuits. In this manuscript, we have used Xilinx
+FPGAs for the implementation of all designs. However, our
+proposed methodology is generic and can be implemented on
+FPGAs from other vendors, such as Intel, which also uses
+fracturable 6-input LUTs and carry chains.
+A slice in the conﬁgurable logic block (CLB) of Xilinx’s
+7-series FPGAs have four 6-input LUTs (commonly referred
+as LUT6_2) along with eight ﬂip-ﬂops for registering LUTs
+outputs and a single 4-bit long carry chain [11]. A LUT6_2
+can be used to implement either a single 6-bit combinational
+function, using O6 output bit, or two 5-bit combinational func-
+tions, using O5 and O6 output bits, by deﬁning an INIT
+value, which describes all the possible input combinations for
+which a logic value “1” is required at the output. For exam-
+ple, an INIT value of 0000000000000002(hex)f o r LUT6_2
+deﬁnes to produce outputs O5 = 1& O6 = 0 for input combi-
+nation 100001. Besides the implementation of combinational
+functions, these 6-input LUTs are also used for controlling
+the associated carry chain, as shown in Fig. 3(b). The carry
+chain implements a carry-lookahead adder using O5 as the
+carry-generate signal and O6 as the carry-propagate signal
+as described by (2) and (3). The carry-generate signals for
+the carry chain can also be provided by the external bypass
+Authorized licensed use limited to: Shanghai Jiaotong University. Downloaded on March 25,2026 at 03:14:54 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 4 ---
+214 IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 2, FEBRUARY 2022
+signals AX – DX
+Si = Pi ⊕ Ci (2)
+Ci+1 = Gi + Pi · Ci. (3)
+B. Baugh-Wooley’s Multiplication Algorithm
+Compared to unsigned multiplication, all the PPs in a
+signed multiplication must be properly sign-extended to com-
+pute the accurate product. Baugh-Wooley’s multiplication
+algorithm [37] eliminates the need for computing and commu-
+nicating sign-extension bits by encoding the sign information
+in the generated PPs. For an N × M signed multiplier, (4)
+describes the respective operands in 2’s complement rep-
+resentation. Equation (5) illustrates the generation of the
+signed PPs to compute the ﬁnal product P. Baugh-Wooley’s
+multiplication algorithm rewrites the negative partial prod-
+uct terms, as described in (6), to eliminate the need for
+explicit sign-extension bits. The
+axby term in the equation,
+for x ∈ [0,..., N − 1] and y ∈ [0,..., M − 1], denotes the
+1s complement of the corresponding partial product term. For
+example, for an 8 × 8 signed multiplier, (7) represents the
+signed PPs according to Baugh-Wooely’s algorithm
+A =− aN−12N−1 +
+N−2∑
+n=0
+an2n (4)
+B =− bM−12M−1 +
+M−2∑
+m=0
+bm2m
+P = aN−1bM−12N+M−2 +
+N−2∑
+n=0
+M−2∑
+m=0
+anbm2n+m
+− 2N−1
+M−2∑
+m=0
+aN−1bm2m − 2M−1
+N−2∑
+n=0
+bM−1an2n (5)
+P = aN−1bM−12N+M−2 +
+N−2∑
+n=0
+M−2∑
+m=0
+anbm2n+m
++ 2N−1
+M−2∑
+m=0
+aN−1bm2m + 2M−1
+N−2∑
+n=0
+bM−1an2n
++ 2N−1 + 2M−1 + 2N+M−1 (6)
+P8 = a7b7214 +
+6∑
+n=0
+6∑
+m=0
+anbm2n+m + 27
+6∑
+m=0
+a7bm2m
++ 27
+6∑
+n=0
+b7an2n + 28 + 215. (7)
+III. G ENERIC AREA -OPTIMIZED LOW-LATENCY
+UNSIGNED ACCURATE MULTIPLIER ARCHITECTURE
+The proposed implementation of the accurate multiplier
+is based on the basic method of multiplying two multibit
+numbers A
+(N-bits) and B(M-bits), as shown in Fig. 4. The multi-
+plication results in the generation of M-bit and N-bit PPs with
+required shifting. Fig. 5 exhibits the elemental steps of our
+proposed implementation to realize an accurate multiplier. It
+includes the following operations.
+1) Organization of PPs: We have used the 6-input LUTs
+for computing the required PPs by performing the AND
+Fig. 4. N × M basic multiplier design.
+Fig. 5. Proposed design ﬂow of accurate multipliers.
+Fig. 6. PP generation for N × M proposed accurate unsigned multiplier.
+operation between every bit of multiplier and multipli-
+cand. However, to enhance the utilization of LUTs, our
+automated methodology groups every two consecutive
+PPs. Each group contains the second partial product
+shifted left by a single-bit position relative to the ﬁrst
+partial product. Furthermore, the PPs in every group
+are computed and mutually added in one single step.
+However, in every group, there are two partial product
+terms, for example, A
+0B0 and AN−1B1 in the ﬁrst group,
+which are not added with any other partial product term
+in their respective group. Moreover, due to the limited
+number of input/output pins of LUTs in modern FPGAs,
+it is not possible to group more than two partial prod-
+uct terms. For example, the generation and addition of
+PPs A
+2B0, A1B1, and A0B2, as shown by the blue box
+in Fig. 4, cannot be performed in a single step.
+2) LUTs and Carry Chain Assignment: In this step, our
+methodology assigns the 6-input LUTs and the associ-
+ated carry chains to each group of PPs, as shown by the
+computational blocks Type-A and Type-B in Fig. 6. An
+instance of a block, either Type-A or Type-B, denotes a
+6-input LUT with an associated adder and carry chain
+cell (CC). Fig. 7(a) shows the functionality of the LUT
+of block Type-A. The output signals O5 and O6a r e
+Authorized licensed use limited to: Shanghai Jiaotong University. Downloaded on March 25,2026 at 03:14:54 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 5 ---
+ULLAH et al.: HIGH-PERFORMANCE ACCURATE AND APPROXIMATE MULTIPLIERS FOR FPGA-BASED HARDW ARE ACCELERATORS 215
+Fig. 7. LUT conﬁguration for accurate unsigned multiplier. (a) LUT of
+Type-A. (b) LUT of Type-B.
+Fig. 8. Grouping of PPPs to compute ﬁnal product for 16 × 16 multiplier.
+passed to the corresponding carry chain as carry gener-
+ate ( Gi) and carry propagate ( Pi) signals, respectively.
+The LUT conﬁguration for block Type-B, in Fig. 7(b),
+uses O5 for the computation of the least signiﬁcant par-
+tial product term in each row. The generate signal for
+the carry chain element corresponding to block type-B is
+constant “0” and provided by the external bypass signal
+(AX–DX), as already described in Fig. 3. The associated
+carry chain uses (2) and (3) for the generation of sum
+bit (S
+i) and carry out ( Ci+1) bits. The completion of this
+stage of our implementation results in the generation of
+(N + 2)-bits long ⌈(M/2)⌉ PPP.
+3) Rearrangement and Reduction of PPPs: Our implemen-
+tation utilizes ternary and binary adders for reducing
+PPPs to a ﬁnal product. Modern FPGAs provide the
+capability of implementing a ternary adder as a rip-
+ple carry adder (a 3:1 compressor for the simultaneous
+reduction of three PPs). Our automated methodology
+arranges the PPPs in multiple groups; with the intention
+of placing three distinct PPPs in each group. Depending
+on the value of M, in Fig. 4, a group may have one,
+two, or three PPPs. Our implementation then utilizes
+3:1 and 2:1 compressors for reducing PPPs in each
+group. The PPPs reduction phase may produce new par-
+tial sums, which are again grouped and passed through
+3:1 and 2:1 compressors. This process is repeated until
+the ﬁnal product is obtained. For example, for a 16 × 16
+multiplier, eight PPPs are generated. The grouping and
+reduction of these PPPs to compute the ﬁnal product is
+described in Fig. 8.
+Fig. 9 shows the mapping of the proposed implementa-
+t i o nf o ra6×6 accurate multiplier on Xilinx 7-series FPGAs.
+However, the same implementation can also be ported to the
+Fig. 9. Virtex 7 FPGA slice-based representation of PPP generation for 6 ×6
+accurate unsigned multiplier.
+TABLE II
+TYPE -A LUT C ONFIGURATION
+newer versions of FPGAs, such as Virtex UltraScale +.A s
+described previously, a computational block of Fig. 6 is equiv-
+alent to an LUT and the one bit cell (CC) of associated carry
+chain in Fig. 9. Table II deﬁnes the Type-A LUT conﬁgura-
+tion for the generation and summation of partial product bits
+AY BY and AXBX of Fig. 9. The LUT initially performs the
+logical AND operation on ( AY , BY ) and ( AX, BX) and then
+produces the O5 (generate) and O6 (propagate) signals. The
+values O5 = 0x8000 and O6 = 0x7888 accommodates only
+four input values. As discussed in Section II, the INIT value
+for LUT6 to produce O5 = 0x8000 and O6 = 0x7888 will be
+0x7888788880008000. The INIT value for Type-B LUT con-
+ﬁguration is 0xFFFFFFFF80008000 and its conﬁguration is
+shown in Table III.
+As shown in Fig. 9, three 8-bit long PPPs have been
+generated in the ﬁrst stage of multiplication. Our proposed
+automated methodology organizes these PPPs in a single group
+and utilizes ternary addition for computing the ﬁnal product.
+The ternary adder in Fig. 10 shows the computation of the
+ﬁnal product bits P
+1–P4 by adding three PPs in one step. The
+carry out of the slice is forwarded to the carry chain in next
+slice for computing other product bits.
+Authorized licensed use limited to: Shanghai Jiaotong University. Downloaded on March 25,2026 at 03:14:54 UTC from IEEE Xplore.  Restrictions apply. 

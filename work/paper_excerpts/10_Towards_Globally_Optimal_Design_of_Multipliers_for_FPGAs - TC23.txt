@@ -1,0 +1,551 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Towards_Globally_Optimal_Design_of_Multipliers_for_FPGAs - TC23.pdf
+PAGES: 13
+--- PAGE 1 ---
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 72, NO. 5, MA Y 2023 1261
+Towards Globally Optimal Design
+of Multipliers for FPGAs
+Andreas Böttcher and Martin Kumm
+Abstract—The design of a multiplier typically consists of three
+steps: (1) partial product generation, (2) compressor tree design
+and (3) the selection of the ﬁnal adder . Conventionally, these three
+steps are performed consecutively. However, when targeting FP-
+GAs, there are many possibilities in all three design steps that
+heavily inﬂuence each other . This proposal presents for the ﬁrst
+time a holistic optimization, combining all three optimization steps
+yielding a minimum amount of look-up-tables (LUTs) while it can
+also guarantee the minimal number of (pipeline) stages. An ILP-
+formulation for the determination of a combined, globally optimal
+solution for the multiplier tiling, compressor tree generation and ﬁ-
+nal adder selection is proposed. With globally optimal we mean that
+the best solution is found for a given set of sub-multipliers for partial
+product generation, compressors and ﬁnal adder .This allows to
+improve the quality and evaluate the limitations of existing heuristic
+3-step approaches. It is shown experimentally for the example of
+Xilinx FPGAs, that globally optimal solutions can be obtained for
+multiplier sizes of practical relevance, leading to signiﬁcant LUT
+reductions. Additional packing density experiments show that a
+signiﬁcantly larger number of multiplier instances can be mapped
+to the same device.
+Index Terms —Compressor tree, computer arithmetic, FPGA,
+integer linear programming, multiplier, multiplier tiling.
+I. I NTRODUCTION
+M
+ULTIPLIERS are one of the most essential building
+blocks of arithmetic circuits, hence their efﬁcient im-
+plementation in terms of cost, delay and latency is of vital
+interest due to the impact on the properties of the overall design.
+The demand for multiplications was the motivation to ﬁrst
+embed multipliers and nowadays DSP blocks (including pre/post
+adders) as hard blocks into the fabric of FPGAs. DSPs provide
+the most efﬁcient multipliers and should be used whenever
+possible. However, there are two major limitations [1], [2], [3],
+[4]: 1) When the word size of the DSP is much smaller or larger
+than required: either DSP resources are wasted or have to be
+extended with further DSPs or multipliers based on look-up
+tables (LUTs) to meet the requirements. 2) The number of DSP
+is insufﬁcient: efﬁcient LUT-based multipliers are necessary.
+Manuscript received 31 March 2022; revised 20 December 2022; accepted 1
+January 2023. Date of publication 19 January 2023; date of current version
+7 April 2023. This work was supported by German Research Foundation,
+Project under Grant 426369132 Recommended for acceptance by N. Revol.
+(Corresponding author: Martin Kumm.)
+The authors are with the Applied Computer Science Department, Fulda Uni-
+versity of Applied Sciences, 36037 Fulda, Germany (e-mail: andreas.boettcher
+@cs.hs-fulda.de; martin.kumm@cs.hs-fulda.de).
+Digital Object Identiﬁer 10.1109/TC.2023.3238128
+Fig. 1. Traditional (a) and proposed combined (b) multiplier design process.
+Therefore, a design method is necessary which allows to
+design any size of multiplier and to trade DSPs with LUTs. As
+shown in Fig.1(a), the design of multipliers is usually performed
+in three steps:
+1) The partial product generation.
+2) The design of the compressor tree.
+3) The design of the ﬁnal adder.
+For FPGAs, this poses some distinct design challenges as
+there are many possible FPGA mappings in each of the steps.
+Hence, each of these steps requires its own combinatorial opti-
+mization.
+V arious previous works address the efﬁcient mapping of mul-
+tipliers to FPGAs[1], [2], [3], [4], [5], [6], [7], [8], [9], [10], [11],
+[12], [13]. LUT-based multipliers are covered in[3], [5], [7], [8],
+[10], [11]. An efﬁcient LUT-mapping of the Baugh-Wooley-
+multiplier using the fast-carry-chain of recent FPGAs is demon-
+strated in [5]. A Booth-Array-Multiplier for Xilinx FPGAs is
+presented in[3], [7], [8]. Another efﬁcient LUT-mapping scheme
+for small multipliers was presented with the fractal synthesis
+approach [10], [11]. The realization of two smaller multipliers
+from one DSP (and additional LUTs) was demonstrated in [9],
+[11], [12]. Large multipliers using Karatsuba’s algorithm to
+reduce the number of DSPs were addressed in [1], [13].
+Any of the previous methods can be used to generate partial
+products. To design a multiplier with a given arbitrary target
+multiplier size (1st step in Fig.1(a)), the multiplier tiling method-
+ology was devised, primarily to compose multipliers beyond the
+size of a single DSP block from a minimal number of DSPs [1].
+The multiplier tiling methodology has proven to be an effective
+0018-9340 © 2023 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:38 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 2 ---
+1262 IEEE TRANSACTIONS ON COMPUTERS, VOL. 72, NO. 5, MA Y 2023
+method to handle the trade-off between DSPs and supplementary
+LUT-resources to provide resource-efﬁcient solutions for all
+multiplier sizes [2], [4], [6], [13], [14]. Since then, several
+heuristics [2], [6], [13] and optimal [4], [14] methods were
+proposed to solve this underlying optimization problem.
+The next step is the bit-shifted summation of all the partial
+products where compressor trees are used in state-of-the-art
+designs (2nd step in Fig. 1(a)). On FPGAs, full adders and
+half adders, the traditional building blocks of compressor trees,
+do not map efﬁciently. Instead, generalized parallel counters
+(GPCs) [15] have been proposed, since they are designed to
+map well to the given LUT and fast-carry-chain structure of
+modern FPGAs [16]. Several efﬁcient mappings of GPCs us-
+ing the 6-input LUTs (LUT6) [16], [17] and the fast-carry-
+chain [18], [19], [20], [21], [22], [23] were published. Aside
+from the GPCs there is also the particularly efﬁcient (4:2)
+compressor [20], [24], [25]. The introduction of those com-
+pressors complicates the compressor tree design considerably,
+compared to for classic algorithms that only uses full adders
+and half adders [26], [27]. Multiple heuristic [16], [18], [19]
+and optimal [17], [21], [28], [29], [30] solutions were proposed
+for this.
+Ultimately, the ﬁnal adder has to be designed (3 rd step in
+Fig. 1(a)). There are basically two options on FPGAs. One
+is a classic ripple-carry adder (RCA) that features two inputs
+per column and is using the fast carry-chain. Many modern
+FPGAs provide the possibility to realize ternary adders, i.e.,
+adders which can add three inputs, by using the same hardware
+resources as for a common two-input adder [31], [32].Am i x
+of full adders and ternary adder cells may also be beneﬁcial
+as demonstrated in [22]. Usually, the designer selects the adder
+and provides the number of arguments as target size for the
+compressor tree design.
+All these steps have been designed and solved individually.
+However, they are not independent. First, the partial product
+selection (the tiling) inﬂuences the position of bits in the input
+stage of the compressor tree, which can heavily inﬂuence the
+cost of the compressor tree. Next, the compressor tree design
+inﬂuences the word size and shape of the ﬁnal adder, ignoring
+the fact that a slightly more complex compressor tree can lead
+to a smaller ﬁnal adder. Finally, the tiling algorithm can only
+approximate the actual compression costs, since those will only
+be known after the completion of the compression algorithm,
+but has to resort to using statistical average compression costs
+per bit.
+This work presents a holistic optimization, combining all three
+optimization steps in a globally optimal approach using integer
+linear programing (ILP) as shown in Fig. 1(b). With globally
+optimal we mean that the best solution (least resources with
+optional minimum compression stages) is found for a given set of
+sub-multipliers for partial product generation, compressors and
+ﬁnal adder. So far, only two of the three optimization steps have
+been combined in the literature, usually the compressor tree and
+the ﬁnal adder in a heuristic [27] or optimal way [33]. A recent
+optimal approach offers resource advantages for ASICs [33].I n
+contrast to FPGAs, the partial product generation on ASICs is
+trivial as AND gates or Booth encoding are considered state-of-
+the-art that do not require further optimization.
+Fig. 2. Tiling (a) and compressor tree (b) of a 6× 6-multiplier, composed of
+four 3× 3-tiles.
+This proposal
+r presents for the ﬁrst time a combined optimization of
+the partial product generation (tiling), the compressor tree
+design, and ﬁnal adder design,
+r demonstrates the integration of the signed case and the dy-
+namic calculation of the combined sign extension constant
+vector,
+r demonstrates the design of faithfully rounded truncated
+multipliers, with the dynamic calculation of the resulting
+rounding and error re-centering constant,
+r extends the ILP-formulation for faithfully rounded trun-
+cated multipliers [14] to generate valid results for the
+signed truncated case.
+r evaluates the proposed methodology for the example of
+Xilinx FPGAs in comparison with the conventional sep-
+arate optimization as well as multipliers obtained from
+vendor tools in terms of LUT resources, delay, latency and
+packing density.
+II. P REVIOUS MULTIPLIER DESIGN PROCESS
+Consider Fig. 2 as an example for the applied multiplier
+design. Fig. 2(a) shows the tiling representation of a 6× 6
+multiplier, represented as a 6× 6 board. The multiplier is real-
+ized by four 3× 3 sub-multipliers, each represented as a 3× 3
+tile. Those sub-multipliers generate the four 6-bit wide partial
+productsM1,..,4, that enter the ﬁrst stage of the compressor tree,
+represented as dot diagram in Fig. 2(b). The compressor tree
+summates the partial products in the subsequent stages by com-
+pressors (full adders marked blue in the example, compressing
+three bits in one column and produce two bits in one row) and
+the ﬁnal adder (purple) to form a single output vector. The steps
+are detailed in the following including the previous models to
+solve each step individually.
+A. Multiplier Tiling
+Multiplier tiling is the process of designing large multipliers
+from (smaller) sub-multipliers. As shown in Fig. 2(a),al a r g e
+multiplicationX ×Y of size 2W × 2W can be subdivided into
+four smaller sub-multiplications M1,..,4, by splitting X and Y
+into sub-words of size W each
+X ×Y =
+(
+x12W +x0
+)(
+y12W +y0
+)
+= x1y1
+M4
+22 W +(x1y0
+M3
++x0y1
+M2
+)2W + x0y0
+M1
+. (1)
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:38 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 3 ---
+BÖTTCHER AND KUMM: TOW ARDS GLOBALL Y OPTIMAL DESIGN OF MULTIPLIERS FOR FPGAS 1263
+Fig. 3. Geometric shapes of the LUT-based tiles [13].
+TABLE I
+PROPERTIES OF LUT- AND DSP-BASED MULTIPLIERS [13] TARGETING XILINX
+FPGAS,W HERE COST MULT
+e AND COST TILE
+t ARE THE NUMBER OF LUT6 FOR THE
+SINGLE MULTIPLIER AND MULTIPLIER+COMPRESSION,R ESPECTIVEL Y
+Hence, the multiplication can be represented as weighted sum
+of the partial products of M1,..,4. This partitioning of larger
+multipliers can be performed down to the individual partial
+product bits. The multiplier to be designed can be interpreted
+geometrically as a board with the dimensions wX =2 W and
+wY =2 W according to the input width of the multiplicands as
+shown in Fig. 2(a). Every position on the board corresponds to
+a partial product as it would be generated by the AND-gate of
+a Baugh-Wooley multiplier. However, in most practical tilings
+larger sub-multipliers that better utilize the FPGA resources are
+typically more efﬁcient.
+The sub-multipliers can be the embedded DSP-blocks of
+modern FPGAs or LUT-based multipliers. A tiling is considered
+to be valid when each position on the board is covered by exactly
+one tile, such that each partial product bit is represented in the
+output vectors of the tiles. The overlapping of tiles is prevented
+and considered disadvantageous, since it would require compen-
+sation and would unlikely result in the least expensive solution.
+1) Utilized Multiplier Tiles: This work uses a subset of pre-
+viously published state-of-the-art sub-multipliers designed for
+Xilinx FPGAs shown in Fig.3 and TableI, which turned out to be
+the most effective, although the methods proposed here are not
+limited to those tiles. We limit ourself to current Xilinx FPGAs in
+this work but the presented methods are generic and are portable
+to other FPGA architectures. The particular properties of those
+tiles are listed in Table I which are explained in the following.
+Each tile is deﬁned by its shape and the corresponding geometric
+area covered by the tile on the board. For each tile of type t,t h e
+required LUT-costs (as the number of LUT6 equivalents) are
+denoted by cost mult
+t and Dt speciﬁes the number of used DSP
+blocks. For example, the last tile in Table I corresponds to the
+24× 17 (in unsigned case) DSPE48E found in Xilinx devices.
+Furthermore, the tiles produce partial products bits wOut, that
+usually entail additional costs for their compression. Since the
+exact cost for the compression of the bits can not be known
+before the completion of the compressor tree design, an estimate
+˜cost
+comp
+t is used in the previous tiling ILP-formulations[4], [13],
+[14]. It was shown experimentally in [4] to be 0.65 LUT per bit
+with the applied compressor tree design method, leading to a
+total LUT cost of
+costtile
+t = costmult
+t +˜cost
+comp
+t . (2)
+The multiplier set contains several LUT-based multipliers,
+like the 3× 3 shown in Fig. 3(a) which can be mapped to
+ﬁve LUT6 [6] and also generates an output vector of 6 bits as
+partial product. Additionally there are more efﬁcient (in terms
+of covered area per LUT) 3× 2 [3] and 2× 1 [4] multipliers,
+that map ﬁve LUT5 in three LUT6 and two LUT5 in one LUT6,
+respectively. To guarantee valid solutions without overlapping
+the border of the tiled area, also a 1× 1-tile is included. Also
+included is the FPGA mapping of a Baugh-Wooley multiplier[5]
+with a size of 2×k, that is particularly efﬁcient for large
+multipliers since it can already compress two partial products
+per LUT using the integrated fast-carry-chain.
+DSP-based multipliers also provide not only multipliers but
+also pre-adders and post-adders. Previous work proposed to
+combine several DSP results using the post-adders, leading to
+so-called super-tiles [1]. Other work used Karatsuba’s method
+to combine several DSPs using pre-adders and post-adders [34].
+These are interesting for relatively large multipliers with >32
+bits but are not used in this work.
+2) Previous ILP Tiling F ormulation: We will now introduce
+the ILP multiplier tiling methodology presented in[4] that solves
+s t e p1o fF i g .1(a). This work extends it to also solve steps 2+3 in
+a holistic way. All variables and constants used in this and the
+following formulations are summarized in Table II. The optimal
+tiling provides all the positions and tile types for sub-multipliers
+such that each ﬁeld of the board is covered once and the sum of
+all individual costs (cost tile
+t )i sm i n i m a l .
+For that, a decision variabledt
+x,y is deﬁned which is true if (and
+only if) tile of type t is placed at position (x,y ). The objective
+is to minimize the total cost which is given as the sum of the
+decision variables weighted by their respective costs cost tile
+t for
+every possible placement (x,y ) and every possible tile of type
+t from the available set of tiles
+min
+T−1∑
+t=0
+wX−1∑
+x=0
+wY −1∑
+y=0
+costtile
+t dt
+x,y. (3)
+To model that each position of the board should be covered
+exactly once, additional constraints have to be added. The board
+shape is modeled by a constant Ox,y ∈{ 0, 1} that deﬁnes the
+shape of the multiplier. It is true for every position to be covered
+(see light gray area in Fig. 4). This allows to omit particular
+positions as it is needed for truncation. Similarly, a constant
+ot
+x,y ∈{ 0, 1} is deﬁned for each tile, describing its shape (see
+d a r kg r a ya r e ai nF i g .4, representing a2× 3 tile). Its coordinates
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:38 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 4 ---
+1264 IEEE TRANSACTIONS ON COMPUTERS, VOL. 72, NO. 5, MA Y 2023
+TABLE II
+VARIABLES (TOP) AND CONSTANTS (BOTTOM)U SED IN ILP FORMULA TIONS
+Fig. 4. Example of the coverage constants for a 6× 6-multiplier Ox,y and a
+3× 2 tile of type t =4 o4
+x,y placed at (2,0). Coordinates are shown to illustrate
+thatOx,y =1 for for all absolute coordinates (x,y ) that have to be covered and
+that o4
+x,y =1 for all coordinates (x,y ) which are covered by the tile, relative
+to its origin (2,0).
+are relative to its origin and true as long as x and y are within
+the shape of the tile.
+Then, the number of overlapping tiles for a given coordinate
+(x,y ) can be represented as the sum of decision variables,
+weighted by the tiling shape constant. By constraining the
+overlap to be one for every possible position
+C1:
+T−1∑
+s=0
+x∑
+x′=0
+y∑
+y′=0
+ot
+x−x,′y−y′dt
+x′,y′=1 ,
+⎫
+⎬
+⎭
+for 0 ≤ x<w X,
+0 ≤ y<w Y
+with Ox,y =1
+,
+we yield a valid tiling solution.
+Since the embedded DSP-Blocks are a limited resource it
+might be advantageous to limit their use to trade between DSPs
+and LUTs. Accordingly the DSP costs of all available tiles t at
+every possible position are accumulated in an equation by sum-
+mating the decision variablesdt
+x,y weighted with their respective
+TABLE III
+HIGH EFFICIENT GPCS AND ADDERS TARGETING XILINX FPGAS (WHERE
+COSTCOMP
+e IS THE NUMBER OF LUT6,τL, τCC AND τR DESCRIBE THE DELA Y
+OF A LUT, ONE BIT OF CARRY PROPAGA TION IN THECARRY CHAIN AND A
+LOCAL ROUTING DELA Y,R ESPECTIVEL Y,W ITH τ ≈ τL ≈ τR)
+DSP countsDt and constrained by the desired maximal number
+C2 :
+T−1∑
+t=0
+wX−1∑
+x=0
+wY −1∑
+y=0
+Dtdt
+x,y ≤ #DSP.
+B. Compressor Tree Design
+The goal of the compressor tree design method is to ﬁnd the
+cheapest combination of compressors from a set of available
+compressors that compress the partial products (see top of
+Fig. 2(b)) to at most two (three) rows, such that its ﬁnal sum
+can be computed by a two-input (ternary) adder (see bottom of
+Fig. 2(b)). We ﬁrst present the state-of-the-art compressors for
+FPGAs and then discuss a previously proposed ILP formulation
+to solve the compression problem.
+1) Utilized Compressors: The utilized compressors are
+highly optimized circuits, that expect several bits from one or
+more columns of the compressor tree as inputs and adds them to
+calculate output bits that enter several columns of the subsequent
+stage of the compressor tree, such that the total number of bits
+is reduced.
+In Table III, the various compressors are summarized and
+characterized. They can be distinguished between GPCs (upper
+part of Table III) and row adders (lower part of Table III). GPCs
+are characterized by their input and output sizes, denoted by
+comma separated input sizes followed by the length of the output
+vector after the semicolon in the round brackets. For example,
+GPC (2, 3; 3) takes two bits from column 1, and three bits from
+column 0 and generates three output bits (the weighted sum
+of the input bits). An important metric of the compressors is
+their efﬁciency, which is deﬁned as the quotient between the
+differenceδ between input bitsbi and output bitsbo (i.e., bits the
+compressor removes) and the realization cost of the compressor.
+E = bi −bo
+k = δ
+k. (4)
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:38 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 5 ---
+BÖTTCHER AND KUMM: TOW ARDS GLOBALL Y OPTIMAL DESIGN OF MULTIPLIERS FOR FPGAS 1265
+The delay τ of a particular compressor depends on utilized
+components consisting of LUTs (τL) and the carry chain ( τCC).
+AsτCC ≪ τL, short carry chains can be ignored, which simpliﬁes
+the comparison [30]. The delay and cost of the row adder
+depends on their size k.
+2) Pipelining: The term stage as used within this work refers
+to the compressor stages of a compressor tree and not to pipeline
+stages. However, each stage is also a perfect candidate for
+a pipeline stage as each compressor can be equipped with a
+pipeline register without cost by activating an (otherwise un-
+used) ﬂip-ﬂop. Costs have only to be considered for ﬂip-ﬂops
+used to balance the pipeline. To model these, a single-input,
+single-output compressor (1;1) was added to the set of compres-
+sors. In stages that represent a pipeline stage, it can be used to
+model the ﬂip-ﬂop cost while in other stages it represents a wire
+without cost. The cost of each ﬂip-ﬂop is considered to be 0.5
+as for each LUT6, two ﬂip-ﬂops exist on modern FPGAs [21].
+Based on a target clock periodTclk, pipeline stages are introduced
+every⌊Tclk/τ⌋’th compressor stage.
+3) Previous Compressor Tree Design ILP-F ormulation: We
+will now introduce the compressor tree design ILP formulation
+presented in [30] that solves step 2 of Fig. 1(a) and that we will
+combine with [4] for our holistic optimization. It is realized as an
+iterative process where the number of stages is increased until a
+feasible solution is found. This ensures that the minimal number
+of stages is found which is advantageous in terms of latency and
+delay. The solver usually quickly detects if a model is infeasible
+due to an insufﬁcient number of stages. V ariable Ns,c models
+the number of bits of column c in compression stage s of the
+compressor tree. Hence, the input values for the model are the
+number of bits N0,c that enters the ﬁrst stage s =0 ,a st h e ya r e
+generated by the partial products of the sub-multipliers
+C3 : N0,c = no. of input bits in column c.
+The solution is described by integer variables ks,e,c, that count
+the number of compressors of type e, placed in column c of
+stages. For example, assuming the FA in Fig.2(b) is compressor
+element e =0 , the solution is represented as k0,0,3...8 =1 (all
+other ks,e,c are zero).
+The objective is to minimize the total cost of compressors,
+which is obtained by the sum of the individual compressor costs
+costcomp
+e
+min
+S−1∑
+s=0
+C−1∑
+c=0
+E−1∑
+e=0
+costcomp
+e ks,e,c. (5)
+Now, for every stage s and column c of the compressor tree,
+one constraint is generated, to describe the number of bits Me,c
+absorbed by the available compressors e =0 ...E − 1 placed
+between the ﬁrst column c′=0 and the current column, when
+they are placed according to the integer variable ks,e,c′.I ti s
+also possible to connect the compressor inputs to zero constants
+Zs,c ≥ 0 if an otherwise favorable compressor placementks,e,c′
+results in superﬂuous inputs in a particular column c
+C4 : Ns,c =
+E−1∑
+e=0
+c∑
+c′=0
+Me,cks,e,c′−Zs,c
+}
+for0 ≤ s<S ,
+0 ≤ c<C .
+Another constraint is used to sum up the number of bits Ke,c
+that enter a particular column c of the subsequent stage s from
+the outputs of the possible compressors e when they are placed
+in a column c′relative to the current column c between the
+currents and the next stage, as described by the individual integer
+variablesks,e,c′
+C5 : Ns+1,c =
+E−1∑
+e=0
+c∑
+c′=0
+Ke,cks,e,c′
+}
+for 0 ≤ s<S ,
+0 ≤ c<C . .
+As it is usually advantageous to place a two-input ripple carry
+adder or ternary adder as the ﬁnal compression stage, the number
+of bits in the columns of the compressor tree c before the ﬁnal
+adder s = S − 1 are constrained to be 2 or 3 according to the
+applied adder type, to obtain a output vector with a max. column
+height of one in the output stage (s = S).
+C6 : Ns,c ≤
+{3 for s = S − 1 AND ternary adder
+2 for s = S − 1 AND 2− input adder .
+Since those row adders have a variable number of columns, they
+are modeled using high ks,eH ,c+1 middle kx,eM ,c+1 and low
+ks,eL ,c elements that can only be instantiated in this particular
+order, their placement is constrained by
+C7 :ks,eH ,c+1 +kx,eM ,c+1 =ks,eM ,c +ks,eL ,c
+}
+fors = S − 1,
+1 ≤ c<C .
+III. P ROPOSED HOLISTIC TILING &C OMPRESSION
+The previous ILP tiling and compression methods provided
+only locally optimal solutions, while the proposed holistic
+method combines both models to ﬁnd globally optimal solutions.
+We start with describing the combined model and then extend it
+to consider the ﬁnal adder, signed and/or truncated cases.
+A. Combined ILP F ormulation
+To obtain a globally optimal solution for the multiplier, a
+combined formulation is proposed. This gives the solver an
+additional level of freedom to ﬁnd tilings whose output bits can
+be most efﬁciently compressed by the available compressors.
+In the combined model the tiling constraints C1 and C2 remain
+unchanged. While in the independent optimizations the output
+bits from the tiling were used as constants in constraint C3 for the
+compressor tree design, they become variables in the combined
+model. To couple both formulations, the decision variable dt
+x,y
+of every available tilet =0 ...T − 1 at every possible position
+0 ≤ x<w X and 0 ≤ y<w Y that can contribute to a particular
+columnc =0 ...C − 1 of the input stage of the compressor tree
+(s =0 ) according to its contribution constant gt
+c,x,y for a tile of
+typet placed at position(x,y ), is added to the new C3′constraint
+for the corresponding column c, replacing C3 by
+C3′: N0,c =
+T−1∑
+t=0
+wX−1∑
+x=0
+wY −1∑
+y=0
+gt
+c,x,ydt
+x,y
+}
+for 0 ≤ c<C .
+Note that some sub-multipliers might be pipelined as well
+to provide the full performance like, e. g., DSP blocks. Instead
+of adding them in the input stage s =0 , their outputs can be
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:38 UTC from IEEE Xplore.  Restrictions apply. 

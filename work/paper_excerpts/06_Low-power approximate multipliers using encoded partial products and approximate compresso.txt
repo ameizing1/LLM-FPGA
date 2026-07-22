@@ -1,0 +1,676 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Low-power approximate multipliers using encoded partial products and approximate compressors.pdf
+PAGES: 13
+--- PAGE 1 ---
+2156-3357 (c) 2018 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+This article has been accepted for publication in a future issue of this journal, but has not been fully edited. Content may change prior to final publication. Citation information: DOI 10.1109/JETCAS.2018.2832204, IEEE Journal
+on Emerging and Selected Topics in Circuits and Systems
+Abstract—Approximate computing has been considered to 
+improve the a ccuracy-performance trade -off in  error-
+tolerant applications. For many of these applications, 
+multiplication is a key arithmetic operation. Given that 
+approximate compressors are a key element in the design of 
+power-efficient approximate multipliers , we first  propose 
+an initial approximate 4:2 compressor that introduces a 
+rather large error to the output. However, t he number of 
+faulty rows in the compressor’s truth table is significantly 
+reduced by encoding its inputs using generate and 
+propagate signals. Based on this improved compressor, two 
+4×4 multipliers are designed with different accuracies and 
+then are used as building blocks for scaling up to 16×16 and 
+32×32 multipliers. According to the mean relative error 
+distance (MRED), the most accurate of the proposed 16×16 
+unsigned designs has a 44% smaller power -delay product 
+(PDP) compared to other designs with comparable 
+accuracy. The radix-4 signed Booth multiplier constructed 
+using the proposed compressor achieves a 52% reduction in 
+the PDP -MRED product compared to  other approximate 
+Booth multipliers with comparable accuracy. The proposed 
+multipliers outperform other approximate designs in image 
+sharpening and  joint photographic experts group (JPEG) 
+applications by achieving higher quality outputs with lower 
+power consumption s. For the first time,  we show the  
+applicability and practicality of approximate multipliers  in 
+multiple-input multiple -output (MIMO) antenna 
+communication systems with error control coding.  
+ 
+Index Terms —approximate computing, multiplier, MIMO, 
+image sharpening, JPEG. 
+ 
+I. INTRODUCTION 
+ 
+HE continuing shrinkage in the minimum feature size has 
+made integrated circuit behavior increasingly vulnerable  to 
+process, voltage an d temperature (PVT) variations  as well as  
+soft error s [1], [2] . Thus the challenge of ensuring strictly  
+accurate computing is increasing [3]. On the other hand, there 
+exist many applications , such as  multimedia and machine 
+learning, which do not necessarily need fully accurate results. 
+Such applications are tolerant of small inaccuracies [4]-[6] and 
+so approximate computing can be applicable due to its 
+potentially significant reduction in design costs while still 
+producing sufficiently accurate results [7], [8]. 
+Multiplication is a key arithmetic operation that is optimized 
+in digital processors. Many approximate multiplier designs 
+have been proposed in the literature [9]-[18]. In [9], the authors 
+proposed two approximate error accumulation technique s to 
+perform partial product accumulation, resulting in approximate 
+multipliers AM1 and AM2 . The truncation of the least 
+significant bits ( LSBs) of the partial products is considered in  
+[5], resulting in designs  referred to as TAM1 and TAM2 . 
+Approximate compressors AC1 and AC2 are proposed in [11] 
+to reduce the delay and power consumption . While exact 
+compressors are used for the 8 most significant bits (MSBs), the 
+two proposed designs are employed for the 8 LSBs in a 16×16 
+multiplier, referred to as ACM3 and ACM4, respectively. 
+Approximation in the partial product tree is addressed in the 
+broken-array multiplier (BAM) [12], approximate Wallace tree 
+multiplier (AWTM) [13], and the error-tolerant multiplier  
+(ETM) [14]. The so-called under-designed multiplier  (UDM) 
+uses 2 ×2 approximate multiplier block s to construct larger 
+multiplier blocks [15]. The approximate multiplier proposed in 
+[16] approximates the binary logarithm of the multiplicand and 
+multiplier and then add s them and generate s the final 
+approximate product using exponentiation. 
+In this article, we suggest a n initial approximation for a 4:2 
+compressor in which several rows in the compressor’s truth 
+table are faulty. However, the inputs to the compressors, i.e., 
+the partial products of the multiplication, can be encoded using 
+generate and propagate signals s o that the error rate of  the 
+compressor is reduced  significantly. Using the proposed 
+compressor, w e design two 4×4 multipliers in which  
+approximation is employed in the partial product reduction tree, 
+which is the most expensive part of the design of a multiplier  
+[18]. The two proposed design s are then used to construct  
+16×16 and 32 ×32 multipliers that are synthesized by  the 
+Synopsys Design Compiler for ST’s 28-nm CMOS process. 
+The remainder of this article is organized as follows: Section 
+II provides the required background. Section I II presents the 
+proposed multiplier design s and discusses the hardware  
+implementation in detail . Section IV reports the hardware and 
+error performance metrics of the proposed and other 
+approximate multipliers. Image sharpening, joint photographic 
+experts group ( JPEG) compression, and multiple-input 
+multiple-output (MIMO) interference nulling  applications are 
+considered in Section V to provide a practical evaluation of the 
+ 
+ 
+Mohammad Saeed Ansari, Honglan Jiang, Bruce F. Cockburn, Jie Han 
+Low-Power Approximate Multipliers Using 
+Encoded Partial Products and Approximate 
+Compressors 
+ 
+ 
+ 
+ 
+T 
+1 
+This work was financially supported by the Natural Sciences and 
+Engineering Research Council of Canada (NSERC)  (Project No. 
+RES0018685). 
+M. S. Ansari, H. Jiang, B. F. Cockburn, and J. Han are with the 
+Department of Electrical and Computer Engineering, University of 
+Alberta, Edmonton, AB, T6G 1H9, Canada (e -mail: {ansari2, 
+honglan, cockburn, jhan8}@ ualberta.ca). 
+ 
+
+--- PAGE 2 ---
+2156-3357 (c) 2018 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+This article has been accepted for publication in a future issue of this journal, but has not been fully edited. Content may change prior to final publication. Citation information: DOI 10.1109/JETCAS.2018.2832204, IEEE Journal
+on Emerging and Selected Topics in Circuits and Systems
+proposed designs. Finally, Section VI concludes the article. 
+ 
+II. BACKGROUND 
+ 
+A. Partial product accumulation in 4 × 4 multipliers 
+ 
+Consider two 4 -bit u nsigned operands 𝛼 = ∑ 𝛼𝑖2𝑖3
+𝑖=0  
+and 𝛽 = ∑ 𝛽𝑗2𝑗3
+𝑗=0 . The partial product array 𝒑𝒑 is a 4 ×4-bit 
+array of the partial product bits  𝑝𝑝i,j = αi. βj, where 𝑖, 𝑗 ∈
+{0, 1, 2, 3}. Table 1 gives all the partial products for a 4 -bit 
+multiplication and their corresponding product bits. 
+The product is denoted by 𝛾 = ∑ 𝛾𝑘2𝑘7
+𝑘=0 . The bits of γ are 
+produced in stages going from the LSB to the MSB. According 
+to Table 1, 𝛾0 = 𝑝𝑝0,0 and there is no further operation in Stage 
+0. In Stage 1, to generate γ1, we can simply use a half adder that 
+produces a sum bit γ1 and a carry bit ( 𝑐1) for the next  stage. 
+Since the half adder circuit is already a simple design, there is 
+no need to approximate it. 
+ 
+Table 1. Original partial product of the multiplication. 
+ 
+Stage 
+7 
+Stage 
+6 
+Stage 
+5 
+Stage 
+4 
+Stage 
+3 
+Stage 
+2 
+Stage 
+1 
+Stage 
+0 
+ 𝑝𝑝3,3 𝑝𝑝3,2 𝑝𝑝3,1 𝑝𝑝3,0 𝑝𝑝2,0 𝑝𝑝1,0 𝑝𝑝0,0 
+  𝑝𝑝2,3 𝑝𝑝2,2 𝑝𝑝2,1 𝑝𝑝1,1 𝑝𝑝0,1  
+   𝑝𝑝1,3 𝑝𝑝1,2 𝑝𝑝0,2   
+    𝑝𝑝0,3    
+𝜸𝟕 𝛾6 𝛾5 𝛾4 𝛾3 𝛾2 𝛾1 𝛾0 
+ 
+In Stage 2, there are three 𝑝𝑝 terms and the carry from the 
+previous stage ( 𝑐1) that must be added together. Thus, a 4:2 
+compressor is required to generate 𝛾2 and a carry for the next 
+stage. 
+ 
+B. Exact 4 ∶ 2 compressor 
+ 
+The function of the exact 4:2 compressor is implemented by 
+using two appropriately connected full adders (see Fig. 1(a)) as 
+given by 
+ 
+𝑆𝑢𝑚 = 𝑥1 ⊕ 𝑥2 ⊕ 𝑥3 ⊕ 𝑥4 ⊕ 𝐶𝑖𝑛, 
+ 
+𝐶𝑜𝑢𝑡 = (𝑥1 ⊕ 𝑥2). 𝑥3 + (𝑥1 ⊕ 𝑥2̅̅̅̅̅̅̅̅̅̅). 𝑥1, 
+ 
+𝐶𝑎𝑟𝑟𝑦 = (𝑥1 ⊕ 𝑥2 ⊕ 𝑥3 ⊕ 𝑥4). 𝐶𝑖𝑛 + (𝑥1 ⊕ 𝑥2 ⊕ 𝑥3 ⊕ 𝑥4̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅̅). 𝑥4. 
+(1) 
+ 
+The 𝑆𝑢𝑚 output has the same weight as the four input signals 
+while the 𝐶𝑜𝑢𝑡 is used as the carry in for the next higher -order 
+compressor and the output 𝐶𝑎𝑟𝑟𝑦 is weighted like a 𝑝𝑝 bit in a 
+one-bit-higher position. Note that 𝐶𝑜𝑢𝑡 and 𝐶𝑎𝑟𝑟𝑦 have the 
+same weight. The two stages of an exact 4:2 compressor chain 
+are shown in Fig. 1(b) [17]. 
+ 
+Full 
+Adder
+X1 X3
+Full 
+Adder
+Cin
+X4
+Cout
+SumCarry
+X2
+ 
+(a) Compressor design. 
+4:2
+Compressor
+4:2
+Compressor
+X1 X2 X3 X4
+Cout_(i)
+Sum_iCarry_i
+X7X6X5
+Sum_iCarry_(i+1)
+Cout_(i+1)
+Cin
+Cout_(i-1)Cin
+ 
+(b) Compressor chain. 
+Fig. 1. Exact compressor.  
+ 
+III. PROPOSED MULTIPLIER DESIGN 
+ 
+A. Modified approximate 4:2 compressor 
+ 
+The function of an exact 4:2 compressor can be approximated 
+to reduce the hardware cost. It has been shown that 𝐶𝑜𝑢𝑡 does 
+not have a significant impact on the compressor’s accuracy 
+[11], so 𝐶𝑜𝑢𝑡 is ignored in our design. Moreover, our  SPICE 
+simulations confirm that an 𝑋𝑂𝑅 gate consumes more power 
+and is slower than the 𝐴𝑁𝐷 and 𝑂𝑅 gates, as shown in Table 2.  
+ 
+Table 2. Normalized relative comparison of 𝐴𝑁𝐷, 𝑂𝑅 and 𝑋𝑂𝑅 gates. 
+ 
+Gate Delay Power consumption 
+AND 0.58 0.42 
+OR 0.79 0.40 
+XOR 1.00 1.00 
+ 
+Ignoring 𝐶𝑜𝑢𝑡 and not using 𝑋𝑂𝑅 gates as well as our goal to 
+use as few gates as possible led to the approximate compressor 
+truth table given in Table 3. As shown in Table 3, there are 
+five/seven incorrect values for the approximate 𝐶𝑎𝑟𝑟𝑦/𝑆𝑢𝑚 
+outputs which can contribute to error in the function output. 
+ 
+Table 3. Truth table of the proposed approximate compressor. 
+ 
+ 𝒙𝟏 𝒙𝟐 𝒙𝟑 𝒙𝟒 Carry Sum 
+ 0 0 0 0 0/0  0/0  
+ 0 0 0 1 0/0  1/1  
+ 0 0 1 0 0/0  1/1  
+ 0 0 1 1 1/1  0/1  
+ 0 1 0 0 0/0  1/1  
+ 0 1 0 1 1/0  0/1  
+ 0 1 1 0 1/0  0/1  
+ 0 1 1 1 1/1  1/1  
+ 1 0 0 0 0/0  1/1  
+ 1 0 0 1 1/0  0/1  
+ 1 0 1 0 1/0  0/1  
+ 1 0 1 1 1/1  1/1  
+ 1 1 0 0 1/1  0/1  
+ 1 1 0 1 1/1  1/1  
+ 1 1 1 0 1/1  1/1  
+ 1 1 1 1 0/1  0/1  
+𝒂𝒑𝒑𝒓𝒐𝒙𝒊𝒎𝒂𝒕𝒆  𝒔𝒖𝒎 = (𝒙𝟏 + 𝒙𝟐) + (𝒙𝟑 + 𝒙𝟒) 
+𝒂𝒑𝒑𝒓𝒐𝒙𝒊𝒎𝒂𝒕𝒆  𝒄𝒂𝒓𝒓𝒚 = (𝒙𝟏. 𝒙𝟐) + (𝒙𝟑. 𝒙𝟒) 
+ 
+To manage this source of inaccuracy, we encod e the inputs 
+to the compressor using 𝑝𝑟𝑜𝑝𝑎𝑔𝑎𝑡𝑒 and 𝑔𝑒𝑛𝑒𝑟𝑎𝑡𝑒 signals 
+given by 
+ 
+𝑃𝑖,𝑗 = 𝑝𝑝𝑖,𝑗 + 𝑝𝑝𝑗,𝑖, 
+(2) 
+𝐺𝑖,𝑗 = 𝑝𝑝𝑖,𝑗. 𝑝𝑝𝑗,𝑖. 
+ 
+This encoding ensures that although the circuit may have a 
+fairly large number of faulty outputs, it in fact rarely produces 
+
+--- PAGE 3 ---
+2156-3357 (c) 2018 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+This article has been accepted for publication in a future issue of this journal, but has not been fully edited. Content may change prior to final publication. Citation information: DOI 10.1109/JETCAS.2018.2832204, IEEE Journal
+on Emerging and Selected Topics in Circuits and Systems
+those outputs  [18]. To see how this approach affects the 
+compressor’s accuracy, consider Stage 2 in which the following 
+terms are added: 𝑝𝑝2,0, 𝑝𝑝1,1, 𝑝𝑝0,2 and 𝑐1. Table 4, where 𝑁𝐴 
+stands for  𝑁𝑜𝑡 𝐴𝑝𝑝𝑙𝑖𝑐𝑎𝑏𝑙𝑒, shows how encoding the partial 
+products using (2) helps to improve the design accuracy 
+compared to the situation in Table 3. 
+Note that all possible  input combinations for the 4×4 
+multiplier were considered (24×24=256) to obtain the 
+probability of each input combination in Table 4 . Using the 
+proposed technique, the number of faulty 𝐶𝑎𝑟𝑟𝑦/𝑆𝑢𝑚 values 
+reduces from 5/7 to 2/4.  Note that the two approximated cases 
+for the 𝑐𝑎𝑟𝑟𝑦 signal occur only with a small probability of 
+0.078 (0.0624+0.0156), see Table 4. 
+It is also worth mentioning that the following combinations 
+in Table 4 cannot occur, so they do not contribute to the output 
+errors for the approximate compressor: 
+1. “0, 1” for  (𝑝𝑝1,1, 𝑐1): since 𝑐1 = 𝑝𝑝0,1. 𝑝𝑝1,0 =
+(𝛼0. 𝛽1). (𝛼1. 𝛽0), 𝑐1 = “1” means that 𝛼0, 𝛽1, 𝛼1, and  𝛽0 
+are “1”. Consequently, 𝑝𝑝1,1 = 𝛼1. 𝛽1 = “1”. Hence, it is 
+impossible to have the “0, 1” combination for (𝑝𝑝1,1, 𝑐1). 
+2. “0, 1, 1” for (𝑐1, 𝑝𝑝1,1, 𝐺2,0): h aving 𝑐1 = 𝑝𝑝0,1. 𝑝𝑝1,0 =
+(𝛼0. 𝛽1). (𝛼1. 𝛽0) = “0” and 𝑝𝑝1,1 = 𝛼1. 𝛽1 = “1” means at 
+least one of 𝑎0 or 𝑏0 is “0”, which leads to 𝐺2,0 =
+𝑝𝑝2,0. 𝑝𝑝0,2 = (𝛼2. 𝛽0). (𝛼0. 𝛽2) = “0”. Thus, the “0, 1, 1” 
+combination for (𝑐1, 𝑝𝑝1,1, 𝐺2,0) is not applicable. 
+3. “0, 1” for (𝑃2,0, 𝐺2,0): 𝐺2,0 = 𝑝𝑝2,0. 𝑝𝑝0,2 = “1” means that 
+both 𝑝𝑝2,0 and 𝑝𝑝0,2 are “1”. Therefore, 𝑃2,0 =
+𝑝𝑝2,0+𝑝𝑝0,2 = “1” and so we cannot have  the “0, 1” 
+combination for (𝑃2,0, 𝐺2,0). 
+ 
+Table 4. Truth table for the Stage 2 compressor. 
+ 
+𝑷𝟐,𝟎 𝑮𝟐,𝟎 𝒑𝒑𝟏,𝟏 𝒄𝟏 Carry Sum Probability 
+0 0 0 0   0.4218 
+0 0 0 1 NA NA 0.0000 
+0 0 1 0   0.1251 
+0 0 1 1   0.0156 
+0 1 0 0 NA NA 0.0000 
+0 1 0 1 NA NA 0.0000 
+0 1 1 0 NA NA 0.0000 
+0 1 1 1 NA NA 0.0000 
+1 0 0 0   0.2814 
+1 0 0 1 NA NA 0.0000 
+1 0 1 0   0.0624 
+1 0 1 1   0.0312 
+1 1 0 0   0.0468 
+1 1 0 1 NA NA 0.0000 
+1 1 1 0 NA NA 0.0000 
+1 1 1 1   0.0156 
+ 
+According to (2) and the laws of Boolean algebra, when 𝑃2,0 
+and 𝐺2,0 are used as the 𝑥1 and 𝑥2 inputs to the compressor, the 
+𝑠𝑢𝑚 and 𝑐𝑎𝑟𝑟𝑦 signals in the compressor for Stage 2 can be 
+simplified as  
+ 
+𝑠𝑢𝑚 = 𝑥1 + 𝑥3, 
+(3) 𝑐𝑎𝑟𝑟𝑦 = 𝑥2 + 𝑥4. 
+ 
+To compute 𝛾3 in Stage 3, the four 𝑝𝑝𝑖,𝑗 terms and the carry 
+𝑐2 from Stage 2 should be added and therefore a 5:2 compressor 
+is required. Since the proposed compressor is a 4:2  design, we 
+can merge two of these five signals to reduce them to four, as 
+specified by  
+ 
+𝑥1 = 𝑐2, 𝑥2 = 𝐺3,0 + 𝐺2,1, 𝑥3 = 𝑃2,1, 𝑥4 = 𝑃3,0. (4) 
+where 𝑥1, 𝑥2, 𝑥3 and 𝑥4 are the inputs to the compressor that 
+generates 𝛾3 and a carry out ( 𝑐3) for the next stage.  Table 5 
+shows how altering the partial products affects the 
+compressor’s truth table in Stage 3.  As in Stage 2, the design 
+can be simplified by using Boolean algebra. The resulting 
+simplified compressor design for Stage 3 is then given by   
+ 
+𝑠𝑢𝑚 = 𝑥1 + 𝑥3 + 𝑥4, 
+(5) 
+ 
+𝑐𝑎𝑟𝑟𝑦 = 𝑥1. 𝑥2 + 𝑥3. 𝑥4. 
+ 
+The calculation of  𝛾4 in Stage 4 is exactly like the calculation 
+of 𝛾2 in Stage 2. It uses a 4:2 compressor to add 𝑝𝑝3,1, 𝑝𝑝2,2, 
+𝑝𝑝1,3 and 𝑐3 to generate 𝛾4 and a carry out for the next stage 
+(𝑐4). Table 6 shows the effect of the change on the partial 
+products. As shown in Table 6, the number of faulty cases has 
+been reduced and those that remain are less likely to happen. 
+Note that the only output that differs in Table 6 and Table 4 
+is the carry signal. In fact, the carry signals in these two stages 
+are generated from different terms. Using the same argument as 
+in Table 4, when 𝐺3,1 = 1, 𝑃3,1 must be “1”. Hence, the entries 
+that do not follow this are 𝑁𝐴 entries. Also, note that according 
+to the laws of Boolean algebra, the 𝑐𝑎𝑟𝑟𝑦 and 𝑠𝑢𝑚 signals in 
+the compressor for Stage 4 can be simplified as: 
+ 
+𝑠𝑢𝑚 = 𝑥1 + 𝑥2 + 𝑥3, 
+(6) 𝑐𝑎𝑟𝑟𝑦 = 𝑥2 + 𝑥3. 𝑥4. 
+ 
+Table 5. Truth table for the Stage 3 compressor. 
+ 
+𝒄𝟐 𝑮𝟑,𝟎 + 𝑮𝟐,𝟏 𝑷𝟐,𝟏 𝑷𝟑,𝟎 Carry Sum Probability 
+0 0 0 0   0.3087 
+0 0 0 1   0.1953 
+0 0 1 0   0.1952 
+0 0 1 1   0.1092 
+0 1 0 0 NA NA 0.0000 
+0 1 0 1   0.0273 
+0 1 1 0   0.0315 
+0 1 1 1   0.0233 
+1 0 0 0   0.0079 
+1 0 0 1   0.0156 
+1 0 1 0   0.0158 
+1 0 1 1   0.0314 
+1 1 0 0 NA NA 0.0000 
+1 1 0 1   0.0079 
+1 1 1 0   0.0038 
+1 1 1 1   0.0273 
+ 
+Table 6. Truth table for the Stage 4 compressor. 
+ 
+𝑷𝟑,𝟏 𝑮𝟑,𝟏 𝒑𝒑𝟐,𝟐 𝒄𝟑 Carry Sum Probability 
+0 0 0 0   0.4057 
+0 0 0 1   0.0156 
+0 0 1 0   0.1173 
+0 0 1 1   0.0233 
+0 1 0 0 NA NA 0.0000 
+0 1 0 1 NA NA 0.0000 
+0 1 1 0 NA NA 0.0000 
+0 1 1 1 NA NA 0.0000 
+1 0 0 0   0.2106 
+1 0 0 1   0.0700 
+1 0 1 0   0.0390 
+1 0 1 1   0.0547 
+1 1 0 0   0.0193 
+1 1 0 1   0.0272 
+1 1 1 0   0.0039 
+1 1 1 1   0.0116 
+ 
+ 
+
+--- PAGE 4 ---
+2156-3357 (c) 2018 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+This article has been accepted for publication in a future issue of this journal, but has not been fully edited. Content may change prior to final publication. Citation information: DOI 10.1109/JETCAS.2018.2832204, IEEE Journal
+on Emerging and Selected Topics in Circuits and Systems
+B. Two approximate 4 × 4 multipliers 
+ 
+The two proposed 4×4 approximate multipliers are referred 
+to as: (1) M1, that considers the carry from the previous stage 
+(𝑐4) and uses an exact full -adder to add 𝑝𝑝 terms 𝑝𝑝3,2, 𝑝𝑝2,3, 
+and 𝑐4; and (2) M2, that ignores 𝑐4 and uses an exact half adder 
+to add 𝑝𝑝3,2 and 𝑝𝑝2,3. They differ in how the product bit  𝛾5 is 
+produced. Hence, M1 and the larger multipliers that are 
+constructed using it are more accurate than M2 and its scaled-
+up variants. However, since 𝑐4 is generated from the four LSBs, 
+it does not introduce a large error in an 8×8 multiplier. Note 
+that ignoring 𝑐4 breaks the longest path (that is, the carry 
+propagation) and it is a common technique to reduce the 
+circuit’s latency [14], [19]. 
+The sixth 𝑆𝑢𝑚 output of the full adder in design M1 and the 
+half adder in design M2 are both denoted by 𝛾5 and the 
+corresponding carry signal, 𝑐5, goes to the next stage to be 
+added to 𝑝𝑝3,3 using an exact half adder. The 𝑆𝑢𝑚 and 𝐶𝑎𝑟𝑟𝑦 
+outputs of this final half adder produce 𝛾6 and 𝛾7, respectively, 
+see Fig. 2 . Fig. 2 summarizes the two mentioned designs by 
+showing the employed blocks for reducing the partial products. 
+These blocks include: (1) half adder s, (2) full adder s, and (3) 
+4:2 compressors. The structure of compressors for Stage 2, 3 
+and 4 are specified in Tables 4, 5, and 6, respectively. 
+ 
+ 
+Fig. 2. Partial product reduction in multipliers M1 and M2. 
+ 
+C. Scaling up to larger multipliers 
+ 
+In order t o construct larger , e.g. 16×16 and 32×32, 
+approximate multipliers, the two proposed 4×4 multipliers are 
+combined in an array structure . For instance, t o construct a n 
+8×8 multiplier using a 4× 4 design, the two 8-bit operands 𝐴 
+and 𝐵 are partitioned into two 4-bit nibbles, namely 𝛼𝐻 and 𝛼𝐿 
+for 𝐴 and 𝛽𝐻 and 𝛽𝐿 for 𝐵. Note that 𝛼𝐻 and 𝛽𝐻 are the 4 MSBs 
+and 𝛼𝐿 and 𝛽𝐿 indicate the 4 LSBs of 𝐴 and 𝐵, respectively. 
+Each two of these four nibbles ( in total 4 possible 
+combinations) are multiplied using 4×4 multipliers and the 
+partial products are then shifted (based on the nibble ’s 
+importance) and added together  (using a Wallace tree 
+architecture) to produce the final multiplication result. Building 
+2n×2n multipliers using n×n multipliers is specified in Fig. 3 
+and is described by: 
+ 
+𝛾 = 𝛼 × 𝛽 = (2𝑛 × 𝛼𝐻 + 𝛼𝐿) × (2𝑛 × 𝛽𝐻 + 𝛽𝐿)
+= 22𝑛 × (𝛼𝐻 × 𝛽𝐻) + 2𝑛
+× ((𝛼𝐻 × 𝛽𝐿) + (𝛼𝐿 × 𝛽𝐻)) + (𝛼𝐿 × 𝛽𝐿)
+= 22𝑛 × 𝑃1 + 2𝑛 × (𝑃2 + 𝑃3) + 𝑃4. 
+(7) 
+ 
+Note that each partial product 𝑃𝑖 where 𝑖 ∈ {1, 2, 3, 4} in (7) 
+is generated using an n×n multiplier and multiplications by 22𝑛 
+and 2𝑛 are simply  done by  2𝑛-bit and 𝑛-bit left shifts, 
+respectively. Given that  𝑃4 is the least and 𝑃1 is the m ost 
+significant partial products, whereas 𝑃2 and 𝑃3 are equivalently 
+significant, multipliers with different accuracies can be 
+designed with different configurations . W e propose six 8×8 
+approximate multipliers, three of which, i.e. M8 -1, M8-3, and 
+M8-5, use M1 and the other three use M2 as their main building 
+block. Table 7 shows how each of these six 8 ×8 multipliers is 
+constructed. 
+ 
+αH
+ αL
+βH
+ βL
+P4 = αL  x  βL
+P3 = αH  x  βL
+P2 = αL  x  βH
+P1 = αH  x  βH
+ 
+Fig. 3. Building 2n×2n multipliers using n×n multipliers. 
+ 
+ 
+Table 7. Using M1 and M2 to construct 8×8, 16×16, and 32×32 designs. 
+ 
+Size Design P1 P2 P3 P4 
+8×8 
+M8-1 M1 M1 M1 M1 
+M8-2 M2 M2 M2 M2 
+M8-3 Exact M1 M1 M1 
+M8-4 Exact M2 M2 M2 
+M8-5 Exact Exact Exact M1 
+M8-6 Exact Exact Exact M2 
+16×16 
+M16-1 M8-1 M8-1 M8-1 M8-1 
+M16-2 M8-2 M8-2 M8-2 M8-2 
+M16-3 M8-3 M8-3 M8-3 M8-3 
+M16-4 M8-4 M8-4 M8-4 M8-4 
+M16-5 M8-5 M8-5 M8-5 M8-5 
+M16-6 M8-6 M8-6 M8-6 M8-6 
+𝟑𝟐 × 𝟑𝟐 M32-5 M16-5 M16-5 M16-5 M16-5 
+M32-6 M16-6 M16-6 M16-6 M16-6 
+ 
+According to Table 7, M8-1 and M8-2 use 4×4 approximate 
+multipliers M1 and M2, respectively, to generate all four partial 
+products from 𝑃1 to 𝑃4. M8 -3 and M8 -4 are more accurate 
+designs in which the most significant partial product, 𝑃1, is 
+generated using an exact 4 ×4 multiplier and M1 and M2 are 
+respectively used to generate 𝑃2, 𝑃3, and 𝑃4. M8-5 and M8-6 are 
+the most accurate designs  in which  only the least significant 
+partial product, 𝑃4, uses approximate multipliers M1 and M2, 
+respectively, and the other three partial products are generated 
+using exact multipliers. 
+
+
+--- PAGE 5 ---
+2156-3357 (c) 2018 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+This article has been accepted for publication in a future issue of this journal, but has not been fully edited. Content may change prior to final publication. Citation information: DOI 10.1109/JETCAS.2018.2832204, IEEE Journal
+on Emerging and Selected Topics in Circuits and Systems
+Note that 16×16 and 32×32 approximate multipliers can be 
+constructed by considering (6). We scaled up the six 8×8 
+designs in Table 7 to form six 16×16 and 32×32 multipliers. 
+Using the six 8×8 multipliers in Table 7 to construct 16×16 
+ones, as specified in Fig. 3 and (6), we obtain 64 possible 16×16 
+multiplier designs . Since this is a large number, we only 
+consider six designs using the simple scheme shown in Table 7. 
+These designs are (1) the most accurate scaled-up variants using 
+M1 and M2, referred to as M16-5 and M16-6, respectively; (2) 
+the most hardware efficient  scaled-up variants using M1 and 
+M2, referred to as M16-1 and M16-2, respectively; and (3) two 
+designs (one using M1, i.e.M16-3 and the other one using M2, 
+i.e. M16 -4) that have a good trade-off between accuracy and 
+hardware. Only one type of 8×8 multipliers is used to construct 
+the 16 ×16 designs. The most accurate variants of the 16 ×16 
+multipliers, i.e. M16 -5 and M16 -6, are selected to construct 
+32×32 multipliers M32 -5 and M32 -6, respectively, as 
+described in Table 7. 
+The same design approach can be applied to any n×n 
+multiplier where n is a power of 2. Since we have six 8 ×8 
+multipliers and four n×n multipliers are required to build a 
+2n×2n multiplier, the number of possible designs is given by: 
+ 
+(64)log2(𝑛
+8) = (64)log2(𝑛)−3 = 6
+(𝑛2
+64)
+. (8) 
+ 
+According to (8 ), the number of possible designs 
+exponentially increases with n2. These designs have a wide 
+range of accuracy-hardware trade-offs and could be utilized in 
+different applications, based on application requirements. 
+ 
+D. Extension to signed Booth multipliers 
+ 
+The proposed approximate compressor can also be utilized in 
+signed Booth multipliers. In a Booth multiplier, the partial 
+products are generated using a Booth encoder , and the major 
+difference between the unsigned and signed Booth 
+multiplication is in the generation of the partial products . 
+Therefore, the partial products  in Booth multipliers can be 
+accumulated using approximate compressors , but not the sign 
+extension bits  [18]. Table 8 shows the radix-4 encoding 
+algorithm in which the multiplier 𝑋 is divided into overlapping 
+groups of three bits (𝑋𝑖−1, 𝑋𝑖, and 𝑋𝑖+1), starting from the LSB. 
+𝑍 is the encoded value to be multiplied with the multiplicand 𝑌. 
+Following [20], a n 8×8 Booth multiplier was designed and 
+implemented using the proposed approximate compressors for 
+the 8 LSBs while the 8 MSBs use exact compressors , see Fig. 
+4. Note that the sign extension of the partial product array is 
+usually simplified by using the Baugh -Wooley algorithm as 
+shown in Fig. 4 [20]. The hot one (HO) in Fig. 4 indicates the 
+negative encoded values, i.e. HO = 1 for the -2Y and -1Y entries 
+in Table 8 and HO = 0 for the +2Y and +1Y entries. ∆̅ denotes 
+a negated sign bit. 
+ 
+Table 8. Radix-4 Booth encoding. 
+ 
+Xi+1 Xi Xi-1 Z Operation on Y 
+0 0 0 0 0Y 
+0 0 1 +1 +1Y 
+0 1 0 +1 +1Y 
+0 1 1 +2 +2Y 
+1 0 0 -2 -2Y 
+1 0 1 -1 -1Y 
+1 1 0 -1 -1Y 
+1 1 1 0 0Y 
+ 
+ 
+Partial products
+Sign extension bit
+15
+ 14
+ 13
+ 12
+ 0
+1
+2
+3
+6
+11
+ 9
+10
+ 4
+5
+8
+ 7
+Half Adder
+Approximate Compressor, Table 4
+Approximate Compressor, Table 5
+OR gate
+1
+1
+1
+Hot one
+ 
+Fig. 4. Using approximate compressors in Booth multipliers. 
+ 
+Approximate encoders for constructing approximate radix-4 
+Booth multipliers  are proposed in [19] . To evaluate the 
+proposed compressor, however, we use exact encoders and 
+apply approximate compressors to the exact partial products. 
+ 
+ 
+IV. PERFORMANCE EVALUATION 
+ 
+A. Accuracy analysis 
+ 
+An important metric for an approximate design is the output 
+accuracy with respect to the exact result. We used the  mean 
+relative error distance  (MRED) [21] as the metric  to quantify 
+the accuracy of the approximate designs. In order t o compute 
+the MRED, we first define the relative error distance (RED) by 
+ 
+𝐸𝐷 = |𝑀′ − 𝑀|, 
+𝑅𝐸𝐷 =
+𝐸𝐷
+𝑀 . (9) 
+ 
+In ( 9), 𝑀’ denotes the generated approximate result while 𝑀 
+denotes the exact result. The average value of all the REDs over 
+the entire input space gives the MRED for each design. 
+Table 9 shows the MRED, the error rate  (ER), and the 
+normalized mean error distance ( NMED, the mean error 
+distance normalized by the maximum output of the accurate 
+design) for several 16×16 unsigned multipliers recently 
+reported in the literature. Note that the ER is the percentage of 
+the multiplications for which the approximate design produce s 
+a different result than the exact one. Better designs will tend to 
+have a low ER in addition to a small MRED. 
+Since an exhaustive simulation of all possible input 
+combinations is very time -consuming, we simulated the 
+accuracy of the approximate multipliers using Matlab with 10 
+million uniformly distributed input combinations [8], [10]. 
+Altogether, MRED, ER, and NMED were simulated for 8 ×8 
+multipliers over their entire input space (65536 cases) and the 
+results are also provided in Table 9. 
+The results in Table 9 show that the most accurate of the 
+proposed 16×16 designs, M16-5 and M16-6, are more accurate 
+than their competitors except AM2 -16, which has the same 
+MRED as M16-5. However, with respect to the ER and NMED, 
+M16-5 is clearly more accurate than AM2 -16. It is worth 
+mentioning that the parameter k for AM2 a nd TAM2 is the 
+number of MSBs used for error reduction [9], [5] and for ETM 
+k indicates the number of LSBs in the non -multiplication part 

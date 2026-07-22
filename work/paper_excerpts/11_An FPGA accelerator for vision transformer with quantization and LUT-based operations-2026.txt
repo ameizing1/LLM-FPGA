@@ -1,0 +1,480 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\An FPGA accelerator for vision transformer with quantization and LUT-based operations-2026.pdf
+PAGES: 8
+--- PAGE 1 ---
+IEICE TRANS. INF. & SYST., VOL.E109–D, NO.1 JANUARY 2026
+41
+PAPER Special Section on Forefront Computing
+An FPGA Accelerator for Vision Transformer with Quantization
+and LUT-Based Operations
+Cheng XUya), Yirong KANyb), Renyuan ZHANGyyc), Nonmembers, and Yasuhiko NAKASHIMAy, Fellow
+SUMMARY This paper proposes a Field-Programmable Gate Array
+(FPGA) accelerator for Vision Transformers (ViTs) with quantization and
+look-up-table (LUT) based operations. First, two improved quantization
+methods are proposed, achieving comparable performance at lower bit-
+widths. Furthermore, linear and nonlinear units’ designs are proposed to
+support diverse operations in ViTs models. Finally, the LUT-based acceler-
+ator design is implemented and evaluated. Experimental results on the Ima-
+geNet dataset demonstrate that our proposed quantization method achieves
+an accuracy of 80.74% at 2-bit width, outperforming state-of-the-art Vision
+Transformer quantization methods by 0.1% to 0.5%. The performance of
+the proposed FPGA accelerator demonstrates a higher energy eﬃciency,
+achieving a peak energy eﬃciency of 7.06 FPS/W and 246 GOPS/W.
+key words: vision transformer, FPGA, quantization, acceleration
+1. Introduction
+Over the past few years, the Transformer architecture has rev-
+olutionized the ﬁeld of natural language processing (NLP).
+Inspired by its success in NLP, Transformer-based models,
+such as Vision Transformers (ViTs), have demonstrated re-
+markable capabilities across various computer vision (CV)
+tasks, often surpassing state-of-the-art convolutional neural
+networks (CNNs) in performance [1]–[3]. These tasks in-
+clude image classiﬁcation [4], [5], object detection [4], [6],
+and image super-resolution [7].
+However, ViTs are characterized by their complex
+model structures, high computational demands, and sig-
+niﬁcant memory requirements, often involving hundreds of
+millions of parameters. For instance, the ViT-L model con-
+tains approximately 307 million parameters, resulting in high
+memory consumption and extended inference times. De-
+ploying such models on resource-constrained edge devices
+is a signiﬁcant challenge. Additionally, many real-time CV
+applications demand low latency, making eﬃcient deploy-
+ment even more critical. Consequently, model compression
+Manuscript received January 9, 2025.
+Manuscript revised April 22, 2025.
+Manuscript publicized June 24, 2025.
+yDivision of Information Science, Nara Institute of Science and
+Technology, Ikoma-shi, 630–0192 Japan.
+yySchool of Information Science and Engineering, Yunnan Uni-
+versity, Kunming, 650091, China.
+This paper was presented at the T welfth International Sympo-
+sium on Computing and Networking. This work was supported by
+JSPS KAKENHI Grant Numbers JP22H00515, JP22K21280, and
+JST-ALCA-Next Program Grant Number JPMJAN23F4, Japan.
+a) E-mail: cheng.xu.db8@naist.ac.jp
+b) E-mail: kan.yirong@is.naist.jp (Corresponding author)
+c) E-mail: rzhang@is.naist.jp (Corresponding author)
+DOI: 10.1587/transinf.2025PAP0003
+techniques tailored to Transformer-based architectures are
+essential for practical applications.
+Model quantization has been extensively studied as a
+technique for reducing the computational complexity to ac-
+celerate DNN inference on edge devices. Existing quantiza-
+tion methods can be broadly categorized into post-training
+quantization (PTQ), quantization-aware training (QAT) and
+binaray quantization.
+PTQ methods apply quantization to pre-trained models
+without additional training, making them computationally
+eﬃcient but often leading to accuracy degradation, especially
+for low-bit quantization. PTQ4ViT [8] proposed similarity-
+aware and ranking-aware quantization algorithms to ﬁnd the
+optimal quantization interval of the MLP and self-attention
+layers. TSPTQ-ViT [9] proposed two-scaled post-training
+quantization scheme to reduce the quantization loss and im-
+prove accuracy.
+In contrast, QAT methods [10], [11] incorporate quan-
+tization into the training process, allowing the model to
+adapt to quantization eﬀect and achieve better accuracy.
+FPQ4ViT [10] proposed a learning-based Quantization-
+aware Training approach. Auto-ViT-Acc [11] proposed
+mixed-scheme quantization algorithm to improve compu-
+tation eﬃciency and maintian accuracy.
+Recent studies have explored low-bit quantization tech-
+niques for ViTs, aiming to improve eﬃciency while main-
+taining model accuracy. Binary and ternary quantization
+methods [12], [13] have been proposed to further reduce
+model size and computational complexity. Full-binarized
+ViTs[14] replace full-precision weights and activations with
+binary values, enabling eﬃcient bitwise operations. How-
+ever, these extreme quantization approaches often lead to sig-
+niﬁcant accuracy degradation. Some studies [8], [11] have
+investigated mixed-precision quantization, allocating diﬀer-
+ent bit-widths to diﬀerent layers to balance eﬃciency and
+accuracy.
+While PTQ methods oﬀer a lightweight solution for
+quantization without requiring retraining, they often strug-
+gle with severe accuracy degradation under ultra-low-bit set-
+tings due to the limited ﬂexibility in optimizing pre-trained
+weights. QAT methods improve accuracy by incorporating
+quantization into the training process, but they introduce ad-
+ditional computational overhead and require careful tuning
+to prevent unstable convergence. Full binary quantization
+further reduces model size and computational complexity
+but suﬀers from signiﬁcant performance loss, making it im-
+practical for ViT-based applications with high accuracy re-
+Copyright © 2026 The Institute of Electronics, Information and Communication Engineers
+
+--- PAGE 2 ---
+42
+IEICE TRANS. INF. & SYST., VOL.E109–D, NO.1 JANUARY 2026
+quirements.
+To address these challenges, this work proposes a
+hardware-aware quantization framework that builds upon
+QAT. Unlike conventional uniform quantization, our ap-
+proach considers the weight distribution across diﬀerent
+model layers that are often sparse and zero-centered and ap-
+plies ﬁner-granularity quantization to better preserve small-
+magnitude weights. This improves the trade-oﬀ between
+accuracy and hardware eﬃciency, enabling competitive per-
+formance under ultra-low-bit settings on FPGA platforms.
+The contributions of our work are summarized as fol-
+lows:
+• T wo quantization approaches are proposed to improve
+model inference accuracy and utilize FPGA LUT re-
+source eﬃciently.
+• A quantization-aware training algorithm is proposed to
+further enhance model performance.
+• FPGA-speciﬁc algorithms and hardware structures are
+designed for linear and non-linear layers in Vision
+Transformers.
+• An LUT-based vision transformer accelerator is imple-
+mented and optimized, oﬀering signiﬁcant improve-
+ments in accuracy and performance for resource-
+constrained edge devices.
+This article extends the authors’ previous work [15],
+which proposed FPGA-oriented quantization approaches for
+ViTs. This version brings updated related works (Sect. 1),
+explains detailed vision transformer literatures (Sect. 2), pro-
+poses design approaches for linear layers and nonlinear lay-
+ers of vision transformer (Sect. 3), and provides additional
+evaluations with FPGA-based acceleration works (Sect. 4).
+2. Preliminaries
+This section provides an overview of the Vision Transformer
+(ViT) architecture and various quantization schemes. A
+detailed analysis of the ViT model components, particu-
+larly the implementation of its nonlinear parts, is presented,
+highlighting their importance in model inference. Further-
+more, diﬀerent quantization techniques, including uniform
+and non-uniform quantization intervals, are explored. By
+comparing and analyzing these techniques, we reveal their
+potential impact on resource utilization and computational
+performance in FPGA implementations.
+2.1 Vision Transformer
+The Transformer model, initially designed for NLP tasks,
+revolutionized the ﬁeld by addressing the limitations of
+RNNs such as LSTMs and GRUs. Its encoder-decoder struc-
+ture and self-attention mechanisms enable parallel computa-
+tion, reducing training time and improving task performance,
+particularly in machine translation. As depicted in Fig. 1, the
+Vision Transformer (ViT) encoder comprisesL identical lay-
+ers, each containing two primary components: a multi-head
+Fig. 1 Vision Transformer structure.
+self-attention (MSA) mechanism and a multi-layer percep-
+tron (MLP). Layer normalization (LN) [16] is applied prior
+to each sub-layer, and residual connections merge outputs
+with the input to preserve information ﬂow.
+ViT enhances feature extraction by employing multi-
+head self-attention, where multiple attention heads process
+data simultaneously, and their results are concatenated to
+produce the ﬁnal output. The computational complexity of
+ViT arises primarily from extensive matrix multiplication
+operations in the MLP and MSA blocks, which dominate the
+overall workload. While quantization strategies typically
+target the linear layers to reduce computational demand, the
+nonlinear layers, such as softmax, layer normalization and
+GELU, which play a critical role in enhancing the model’s
+expressive power, often remain in full precision due to their
+lower cost and critical impact on model accuracy.
+The layer normalization function in Vision Transformer
+can be expressed as Eq. (1):
+LN ¹xi; jº = j  xi; j   i
+p
+2 + ϵ
++ j (1)
+Where i represents the mean of the inputs in the i-th
+row, 2
+i denotes the variance of the inputs in the i-th row, and
+ϵ is a very small constant added to avoid division by zero.
+Additionally, j and j represent the weight and bias for the
+j-th column, respectively.
+To avoid overﬂow and potential precision loss, the Soft-
+max function in Vision Transformers can be expressed as
+Eq. (2):
+So f tmax ¹xi; jº = exi ; j  xm a xi
+∑n
+j=1exi ; j  xma xi
+(2)
+Where xi; j represents the input data, and xmax i denotes
+the maximum value among the n inputs along the column
+dimension.
+The GELU function in Vision Transformers is approx-
+imated using Eq. (3):
+
+--- PAGE 3 ---
+XU et al.: AN FPGA ACCELERATOR FOR VISION TRANSFORMER WITH QUANTIZATION AND LUT-BASED OPERATIONS
+43
+GE LU¹xi;jº = xi;j
+2 
+(
+1+tanh
+(√
+2
+
+)(
+xi;j +0:044715x3
+i;j
+))
+(3)
+2.2 Quantization Schemes
+Uniform interval quantization encompasses binary, ternary,
+and ﬁxed-point approaches. Binary Neural Networks
+(BNNs) [12] and XNOR-Net [13] exemplify binary quan-
+tization, where restricting weights to (  1, +1) allows re-
+placing multiplications with additions/subtractions. Ternary
+quantization, by including zero, requires an additional bit
+for weight representation but similarly beneﬁts from non-
+multiplicative operations. While both binary and ternary
+quantization signiﬁcantly reduce computational complexity
+and simplify hardware accelerator implementations, they in-
+cur a noticeable accuracy penalty.
+In contrast, ﬁxed-point quantization employs moder-
+ate and adaptable bit-widths, enabling the maintenance of
+accuracy comparable to 32-bit ﬂoating-point models while
+improving eﬃciency.
+For m-bit ﬁxed-point quantization scheme [11], the
+quantized weights are deﬁned as shown in Eq. (4):
+QFP ¹m; º = 
+{
+0; 1
+2m 1   1; 2
+2m 1   1; : : : ;1
+}
+(4)
+The deﬁnition of the quantizer is given in Eq. (5), which
+maps the 32-bit ﬂoating-point weights ! to the quantized
+weights represented by m-bit ﬁxed-point values.
+b! = ∏
+QF P ¹!º =   round¹h¹⌈!; ⌋ºº (5)
+where ∏
+QF P ¹º denotes the quantizer function to project
+onto QF P¹m; ); the function h( ) transforms a value within
+[-1,+1]; and ⌈!; ⌋ clips ! by Eq. (6):
+⌈!; ⌋ =
+8>> <
+>>:
+ 1 ; ! <  
+! ;    !  
+1 ; ! > 
+(6)
+To balance hardware eﬃciency and model accuracy,
+researchers have explored non-uniform quantization tech-
+niques. Among these, Power-of-T wo (PoT)[17], [18] quan-
+tization signiﬁcantly reduces computational complexity by
+substituting multiplication with bit shifts, greatly reducing
+complexity, but at the cost of precision—even with higher
+bit-widths.
+The m-bit PoT quantized weight values are deﬁned as
+shown in Eq. (7):
+QPOT ¹m; º = 
+{
+0;  1
+22m 1 2 ;  1
+22m 1 3 ; : : : ;1
+}
+(7)
+Quantizing weights to the 2b(b 2 N) allows for the re-
+placement of multiplication operations between weights and
+activations with highly eﬃcient bit shifts, as shown in Eq. (8):
+2b  a =
+8>> <
+>>:
+a << b ; b > 0
+a ; b = 0
+a >> b ; b < 0
+(8)
+While power-of-two (PoT) quantization simpliﬁes hard-
+ware implementation by avoiding multiplications, its pre-
+cision gains are limited even with increasing quantization
+bit widths. Weights are commonly quantized using PoT,
+whereas activations typically employ ﬁxed-point quantiza-
+tion. Applying PoT quantization to activations leads to a
+signiﬁcant loss of precision.
+3. Proposed Method
+This section details the proposed quantization approach and
+design approach of accelerator.
+3.1 Quantization Schemes
+The proposed non-zero ﬁxed-point (NFQ) quantization re-
+duces computational cost and hardware area by eliminating
+zero values from the weight matrix, enabling shift-and-add
+operations instead of multipliers. This signiﬁcantly low-
+ers LUT usage, improves throughput, and better preserves
+small-magnitude weights, leading to higher model accuracy.
+In the NFQ scheme, quantized weight values, repre-
+sented using m bits, are deﬁned as Eq. (9):
+Q N F Q ¹m; º = 
+{
+ 1
+2m 1 ;  2
+2m 1 ; : : : ;1
+}
+(9)
+The mapping of a 32-bit ﬂoating-point weight ! to its
+m-bit NFQ quantized representation b! is performed by the
+following quantizer Eq. (10):
+b! = ∏
+Q N F Q ¹!º =   ¹h¹⌈!; ⌋ºº (10)
+where∏
+Q N F Q ¹º denotes the projection operator that maps a
+value onto the setQ N F Q¹m; º; the function h¹º is a clipping
+function that maps values into the range [ 1, +1]; and⌈!; ⌋
+represents a clipping operation on ! deﬁned as Eq. (11):
+⌈!; ⌋ =
+8>> <
+>>:
+Floor ¹!º ; ! < 0
+Ceil ¹1º ; ! = 0
+Ceil ¹! ; ! > 0
+(11)
+Figure 2 (b) illustrates the weight distribution of the ﬁrst
+row in the QKV linear layer of a Vision Transformer model’s
+ﬁrst layer after NFQ quantization, contrasting it with the
+original weight distribution shown in Fig. 2 (a). By elimi-
+nating zero values from weight matrices, NFQ quantization
+provides an optimization tailored for FPGA hardware char-
+acteristics, leading to improved computational eﬃciency.
+To optimize FPGA resource utilization, a scale power-
+of-2 (SP2) quantization scheme is proposed. While tra-
+ditional power-of-2 quantization uses shifts for multiplica-
+tion and addition, scaling factor multiplication still requires
+FPGA DSP resources. SP2 addresses this by also quantizing
+scaling factors to powers of 2, enabling shift operations for
+
+--- PAGE 4 ---
+44
+IEICE TRANS. INF. & SYST., VOL.E109–D, NO.1 JANUARY 2026
+Fig. 2 Weight value distribution.
+all multiplications and improving LUT eﬃciency. Formally,
+given m-bit representations, the SP2 quantized weight values
+are Eq. (12):
+QS P2 ¹m; º = 
+{
+ 1
+2m 1 ;  2
+2m 1 ; : : : ;1
+}
+(12)
+Where n-bit scaling factor  representation is Eq. (13):
+ =
+{
+2 n; 2 n+1; : : : ;1
+}
+(13)
+And the mapping from a 32-bit ﬂoating-point weight !
+into the quantized weight b! by m-bit representation in SP2
+scheme is given by the following quantizer Eq. (14):
+b! = ∏
+QS P2 ! = 2c¹ ⌈!; n⌋º  h ¹⌈!; ⌋º (14)
+where ∏
+QS P2 ¹º denotes the quantizer function to project on
+QS P2 ¹m; º; the function h ¹º mapping value into the range
+of [  1, +1]; and function c ¹º mapping max weight value
+into the value of power-of-2.
+Figure 2 (c) illustrates the weight distribution of the
+ﬁrst row within the ﬁrst-layer QKV linear layer of the Vi-
+sion Transformer when employing SP2 quantization. This
+distribution exhibits greater value-level sparsity, with more
+weights concentrated on fewer quantized values, compared
+to those observed in the original model Fig. 2 (a) and in the
+NFQ scheme Fig. 2 (b).
+As indicated by Eq. (6), zero values in the weight matrix
+are converted to the smallest positive value. However, this
+conversion can be implemented using either positive or neg-
+ative values. To evaluate the eﬀects of these two approaches,
+experiments were conducted. The accuracy loss curves for
+diﬀerent zero value handling methods under the NFQ quan-
+tization schemes after 50 training epochs. As shown in the
+Fig. 3, the accuracy loss curves for both positive and nega-
+tive zero value handling are very close over the 50 training
+Fig. 3 The loss curve in training processes.
+epochs. The accuracy loss curves for positive and negative
+value handling are nearly identical, with an actual inference
+Top-1 and Top-5 accuracy diﬀerence of approximately 0.1%,
+which is negligible.
+Algorithm 1 outlines our proposed FPGA-oriented Vi-
+sion Transformer quantization training procedure, which op-
+
+--- PAGE 5 ---
+XU et al.: AN FPGA ACCELERATOR FOR VISION TRANSFORMER WITH QUANTIZATION AND LUT-BASED OPERATIONS
+45
+erates with deﬁned bit-widths for weights and activations. In
+this work, we investigate two weight quantization schemes,
+NFQ and SP2, and apply NFQ for activation quantization.
+3.2 Accelerator Design
+In FPGA design, consolidating multiple smaller-scale de-
+signs into a single large-scale design can signiﬁcantly reduce
+complexity while improving energy eﬃciency. The FPGA
+computing array is typically implemented as a systolic ar-
+ray comprising multiple computing units, parameterized by
+using ( ni, no), where ni signiﬁes the input channels, and
+no represents the output channels. To optimize the comput-
+ing array conﬁguration, an exhaustive search Algorithm 2 is
+proposed to aim at maximizing eﬀective throughput. This
+method evaluated the actual throughput across diﬀerent ( ni,
+no) conﬁgurations to identify the optimal solution. Specif-
+ically, all possible ( ni, no) combinations are iterated for all
+layers to calculate the total throughput. Under the quantiza-
+tion scheme adopted in this work, the conﬁgurations are set
+as follows: W2A6 – (54, 128), W4A8 – (64, 64), and W8A8
+– (64, 32).
+The proposed FPGA accelerator for Transformers is
+illustrated in Fig. 4, and the structure of the Processing Ele-
+ment is shown in Fig. 5. To enable both attention layers and
+linear layer computations on a single large-scale computing
+array, the design incorporates three types of processing el-
+ements (PEs): PE0, PE1 and PE2. Each PE supports two
+operational modes, corresponding to the computation re-
+quirements of attention layers and linear layers, respectively.
+During execution, preprocessed partitioned blocks are trans-
+ferred from DRAM to either the input buﬀer or the weight
+buﬀer. The computing array then retrieves data and weights
+from these buﬀers for computation. The output buﬀer feeds
+the data into the nonlinear acceleration unit. Once processed,
+the data is either written back to DRAM or transferred to the
+input buﬀer or weight buﬀer for subsequent computations.
+The GELU layer in Vision Transformers, as described in
+Fig. 4 Overview of the proposed accelerator architecture.
+Fig. 5 PE architecture.
+Eq. (3), can be further approximated for simpler computation
+as Eq. (15):
+G EL U(xi j
+)  xi j
+2 
+(
+1+tanh
+(√
+2
+ xi j
+))
+= xi j
+1+e 
+√
+8
+ xi j
+(15)
+The softmax layer in Vision Transformers, as described
+in Eq. (2), includes the exponential term ex. Direct hard-
+ware implementation of this exponential function on FPGAs
+is prohibitively expensive in terms of hardware resources.
+Consequently, an approximation of ex is employed to reduce
+the computational burden.
+ex =
+(
+1 ≪
+⌊ x
+ln 2
+⌋)
++
+(
+1 + fxg + fxg2
+2 +   
+)
+(16)
+Since directly applying the Taylor expansion to ex re-
+sults in low precision for the integer part, the computation
+is divided into two separate components, as illustrated in
+Eq. (16). The hardware structure for the Exp function with
+a Taylor expansion with three terms is shown in Fig. 6.
+Both the GELU and softmax layers involve reciprocal
+calculations. The reciprocal is computed using the itera-
+tive formula (Eq. (17)), and the hardware structure for the
+reciprocal calculation is shown in Fig. 7.

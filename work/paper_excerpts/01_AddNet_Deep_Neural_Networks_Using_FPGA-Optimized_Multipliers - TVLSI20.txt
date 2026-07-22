@@ -1,0 +1,497 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\AddNet_Deep_Neural_Networks_Using_FPGA-Optimized_Multipliers - TVLSI20.pdf
+PAGES: 14
+--- PAGE 1 ---
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 1, JANUARY 2020 115
+AddNet: Deep Neural Networks Using
+FPGA-Optimized Multipliers
+Julian Faraone ,M a r t i nK u m m, Member , IEEE, Martin Hardieck, Peter Zipf, Member , IEEE,
+Xueyuan Liu, David Boland, and Philip H. W. Leong , Senior Member , IEEE
+Abstract— Low-precision arithmetic operations to accelerate
+deep-learning applications on ﬁeld-programmable gate arrays
+(FPGAs) have been studied extensively, because they offer the
+potential to save silicon area or increase throughput. However,
+these beneﬁts come at the cost of a decrease in accuracy. In this
+article, we demonstrate that reconﬁgurable constant coefﬁcient
+multipliers (RCCMs) offer a better alternative for saving the
+silicon area than utilizing low-precision arithmetic. RCCMs
+multiply input values by a restricted choice of coefﬁcients using
+only adders, subtractors, bit shifts, and multiplexers (MUXes),
+meaning that they can be heavily optimized for FPGAs. We pro-
+pose a family of RCCMs tailored to FPGA logic elements to
+ensure their efﬁcient utilization. To minimize information loss
+from quantization, we then develop novel training techniques
+that map the possible coefﬁcient representations of the RCCMs
+to neural network weight parameter distributions. This enables
+the usage of the RCCMs in hardware, while maintaining high
+accuracy. We demonstrate the beneﬁts of these techniques using
+AlexNet, ResNet-18, and ResNet-50 networks. The resulting
+implementations achieve up to 50% resource savings over
+traditional 8-bit quantized networks, translating to signiﬁcant
+speedups and power savings. Our RCCM with the lowest resource
+requirements exceeds 6-bit ﬁxed point accuracy, while all other
+implementations with RCCMs achieve at least similar accuracy
+to an 8-bit uniformly quantized design, while achieving signiﬁcant
+resource savings.
+Index Terms — Digital arithmetic, ﬁeld programmable gate
+arrays (FPGAs), neural networks, neural network hardware,
+quantization.
+I. I NTRODUCTION
+C
+ONVOLUTIONAL neural networks (CNNs) have been
+widely adopted in recent computer vision applica-
+tions due to their superior prediction capabilities, with
+researchers gravitating toward larger networks with higher
+Manuscript received February 12, 2019; revised June 5, 2019; accepted
+August 11, 2019. Date of publication September 25, 2019; date of current
+version December 27, 2019. This work was supported in part by the Australia–
+Germany Joint Research Co-operation Scheme and in part by the German
+Academic Exchange Service (DAAD) under Grant 57388068. (Corresponding
+author: Julian Faraone.)
+J. Faraone, X. Liu, D. Boland, and P. H. W. Leong are with the
+School of Electrical and Information Engineering, The University of Syd-
+ney, Sydney, NSW 2006, Australia (e-ma il: julian.faraone@sydney.edu.au;
+david.boland@sydney.edu.au; philip.leong@sydney.edu.au).
+M. Kumm is with the Applied Computer Science Faculty, Fulda University
+of Applied Sciences, 36037 Fulda, Ge rmany (e-mail: martin.kumm@cs.
+hs-fulda.de).
+M. Hardieck and P. Zipf are with the Digital Technology Group, Uni-
+versity of Kassel, 34121 Kassel, Germany ( e-mail: hardieck@uni-kassel.de;
+zipf@uni-kassel.de).
+Color versions of one or more of the ﬁgures in this article are available
+online at http://ieeexplore.ieee.org.
+Digital Object Identiﬁer 10.1109/TVLSI.2019.2939429
+computational complexity and memory requirements [1].
+Field-programmable gate array (FPGA) implementations have
+demonstrated improved latency and power efﬁciency com-
+pared with central processing unit (CPU) and graphics process-
+ing unit (GPU) technologies (see [2] and [3]). In contrast
+to CPU/GPU technologies, they allow customized data paths,
+enabling improved parallelism and less data movement. This
+design ﬂexibility poses an opportunity to optimize system per-
+formance through custom hardware tailored to the application.
+Optimizations via compression, quantization, and neural
+network layer explorations have been utilized to reduce com-
+plexity and boost performance (see [4] and [5]). In particular,
+quantizing inference networks to very low precision, such as
+constraining weight representations to binary or ternary values,
+both reduces memory requirements and enables multiplica-
+tions to be replaced with the exclusive
+NOR operation [3], [6].
+However, the disadvantage of extreme quantization is that the
+networks typically incur signi ﬁcant accuracy degradation for
+very low precisions, especially for complex problems.
+One limitation with traditional ﬁxed-point quantization is
+that it has a uniform distribution. However, it has been
+demonstrated that a nonuniform distribution with the same
+number of potential weights can result in better accuracy,
+provided the distribution appropriately matches the desired
+full-precision neural network weight distribution [7], [8]. It
+follows that reducing precision may not be the best method
+to save silicon area. Reconﬁgurable constant coefﬁcient mul-
+tipliers (RCCMs) are an alternative method to reduce FPGA
+resources through time multiplexi ng and resource sharing [9].
+They are usually realized using additions, subtractions, bit
+shifts, and multiplexers (MUXes), meaning that multiplies
+are implemented without requiring digital signal processing
+(DSP) blocks on an FPGA. However, RCCMs are restricted
+to a given number of target coefﬁcients; this has restricted
+their use to DSP application domains including digital ﬁltering
+and linear transformations (see [10]). We propose a method,
+AddNet, to design RCCMs with coefﬁcient sets that approx-
+imate the desired distribution of neural network weights.
+Furthermore, we develop a method to train neural networks to
+take advantage of RCCMs. In doing so, we demonstrate that
+using AddNet to optimize neural networks outperforms low-
+precision arithmetic in terms of accuracy for a given silicon
+area budget.
+AddNet consists of the following stages. First, we design
+a family of RCCMs which are customized to the underlying
+1063-8210 © 2019 I EEE. Personal u se is perm itted, but republication/redistribution requires IEEE permission.
+See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:45 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 2 ---
+116 IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 1, JANUARY 2020
+logic elements on the FPGA. These exhibit very low resource
+usage and have varying coefﬁcient sets. The RCCM coefﬁcient
+set whose distribution best replicates the weight distribution
+of a pretrained network is chosen and the network is retrained
+with weights restricted to these coefﬁcients. This allows the
+optimizer to update network weight parameters during training
+while incorporating information about the underlying hard-
+ware. This study does not consider the embedded multipliers
+present in all modern FPGAs; in practical implementations,
+we envisage different CNN layers using embedded multipli-
+ers or our RCCM, depending on resource and thr oughput
+requirements.
+The trained network is able to learn a representation com-
+patible with the underlying optimized RCCM, achieving both
+high performance and accuracy . This allows a signiﬁcant
+reduction in resource usage for a given throughput, making
+our designs suitable for resource-constrained implementations.
+Additionally, we can scale the parallelism of the design to
+achieve much higher frame rates for similar resource usages.
+Speciﬁcally, this article makes the following contributions.
+1) A novel family of arithmetic RCCM circuits tailored to
+the FPGA fabric for neural network applications which
+signiﬁcantly reduces resource requirements.
+2) A distribution matching technique which allows a
+speciﬁc RCCM to be selected based on the required
+distribution of weights in a CNN and a training algo-
+rithm which ﬁnds solutions compatible with the selected
+RCCM.
+3) We demonstrate that our method achieves signiﬁcant
+improvement in accuracy over low-precision (1–6 bit)
+implementations and signiﬁcant reductions in lookup
+table (LUT) usage over 8-bit ﬁxed-point precision with
+no loss in accuracy for state-of-the-art networks such
+as ResNet [11] implemented in ﬁxed point. More-
+over, weight storage requirements are reduced through
+implicit weight sharing.
+The remainder of this article is structured as follows.
+Section II provides a background to training CNNs and
+constant coefﬁcient multipliers. In Section III, recent state-
+of-the-art research on quantization training and hardware
+architectures for the implem entation of CNNs is reviewed.
+Our methodology for designing our RCCMs is described in
+Section IV. Our training techniques and selection of RCCM
+are presented in Section V. The hardware architecture used
+for evaluating the effects of our methods is described in
+Section VI, followed by training and resource usage results in
+Section VII. Finally, we conclude this article in Section VIII.
+II. B
+ACKGROUND
+In this section, we discuss the basic computation of CNNs
+and introduce ﬁxed-point traini ng and softcore multiplier opti-
+mizations.
+A. Convolutional Neural Networks
+CNNs are biologically inspired networks that process input
+tensors (multidimensional arrays) of (w, h, d) dimensions in
+a translationally invariant manner [1]. Typically, w and h are
+spatial dimensions and d is the number of channels. Process-
+ing operations, such as convolution, pooling, and activation
+functions, are applied in a series of layers, each of which
+transforms the input tensors from dimensions (w, h, d) →
+(w, h, d). A convolutional layer produces d output chan-
+nels, each formed through a convolution of the input tensor
+with a Jl × Kl convolutional kernel window, where typically
+Jl, Kl  w, h, so it operates on local input regions. The
+output of convolutional layer l takes as input Sl images of
+spatial dimensions wl and hl and d is the number of neurons.
+The pixel yl,d,w,h at location (w, h) for the dth neuron is
+calculated as
+yl,w,h,d = g
+⎛
+⎝
+S j
+s=0
+Jl
+j=0
+Kl
+k=0
+wl,d,s, j,k · yl−1,d,w+ j,h+k
+⎞
+⎠ (1)
+where g is the elementwise activation function [such as the
+rectiﬁed linear unit (ReLU) function g(x) = max(0, x)]. The
+outputs of a layer are used as inputs to the next layer. A 2-D
+convolutional layer can be described as matrix multiplication,
+followed by the elementwise activation function. Similarly,
+the output of a fully connected layer can be described as
+y = g(W
+T x) (2)
+where x ∈ Rd×w×h is the input, y ∈ Rd×w×h
+is the
+output, and W ∈ Rd×d×w×h are the weights of a linear
+transformation. Convolutional layers form the bottleneck for
+CNN implementations, and this tensor form allows efﬁcient
+matrix-multiplication libraries to be applied.
+Pooling layers are downsamplers of 2-D images. Max
+pooling layers provide a spatial maximum function, which
+divides an input image into small subtiles of a given window
+size and then replaces these w ith the maximum value in the
+subtile. An average pooling layer is similar; however, it ﬁnds
+the average in the subtile rather than the maximum.
+B. Fixed-Point Training
+Deep neural network (DNN) training is an iterative process
+which has a feedforward path to compute the output and a
+backpropagation path for learning, which involves calculating
+gradients and update the network weights. Training of low-
+precision networks typically involves maintaining a set of
+single- or double-precision ﬂoating point weights W which
+are quantized to a representation q prior to inference (see [6]).
+As the quantization functions employed are piecewise and
+constant, the gradients of quantized weights can be calcu-
+lated and applied to update their corresponding full-precision
+weights [12]. A quantization function which reduces mismatch
+in forward and backward paths i s crucial for high accuracy.
+To further improve accuracy, an alternative to low-precision
+networks is to use a weight-sharing approach [13], [14].
+Weight sharing involves choosing a ﬁnite set of full-precision
+weights indexed by a codebook. Typically, these weights are
+chosen to match the desired distribution to reduce information
+loss, unlike traditional ﬁxed-point quantization where weights
+are uniformly distributed. Keeping the number of different
+weights in the codebook small reduces the word size of the
+indices leading to a small memory footprint. However, weight
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:45 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 3 ---
+FARAONE et al. : AddNet: DEEP NEURAL NETWORKS USING FPGA-OPTIMIZED MULTIPLIERS 117
+sharing is normally not applied in FPGA implementations as
+the weight mapping process introduces additional delays in
+the critical path of the circuit and requires extra hardware.
+Furthermore, higher precision arithmetic units also consume
+more area. For the proposed RCCM, an implicit weight sharing
+is utilized, reducing coefﬁcien t memory without requiring any
+mapping hardware. Meanwhile, our RCCMs are optimized for
+FPGA hardware, meaning that they consume less area than
+ﬁxed-point equivalents.
+C. Small Softcore Multipliers
+Due to the low-precision requirements of neural networks,
+efﬁcient implementations of small multipliers recently have
+gained growing interest [15], [16]. As FPGAs provide embed-
+ded multipliers, it seems natural to use them. For small
+multiplications, there is a way to perform two multiplications
+up to 8×8 bit in a single DSP of typically 18 bits [16]. In case
+the embedded multipliers are not sufﬁcient, efﬁcient logic-
+based (i.e., softcore) multiplier implementations are necessary.
+The use of radix-4 Booth encoding together with an FPGA
+mapping that maps both Booth encoder and decoders in the
+same LUT showed to be the most efﬁcient way to implement
+softcore multipliers leading to up to 50% resource reductions
+[17], [18] on Xilinx FPGAs. Unfortunately, they are only
+this efﬁcient for large word sizes of 16 bits and above. For
+lower word sizes, Xilinx Coregen showed the best results [18].
+An optimization which is particularly suited for small mul-
+tipliers by restructuring common multiplier algorithms was
+recently proposed in [15]. They were optimized for Intel
+Stratix 10 showing the smallest resources and latency. The
+optimizations described in our work add further constraints
+designing multipliers which do not allow arbitrary ﬁxed-point
+number support. This is achieved by applying concepts from
+reconﬁgurable multipliers.
+III. R
+ELATED WORK
+Many quantization methods for neural networks have been
+explored with the aim of achieving efﬁcient inference in
+hardware. An efﬁcient way of training networks with dif-
+ferent forward and backward functions was introduced in
+[12]. This led to new derivations of uniform quantization
+functions for low-precision neural networks in [19] and [20].
+Learning symmetric quantization (SYQ) [21] further explored
+the importance of initializations and designing a quantization
+function which reduces the forward and backward mismatches.
+They achieved state-of-the-art accuracies under low-precision
+weights and activations. This inspired the derivation of the
+distribution matching initialization method for efﬁcient quan-
+tization. Effective nonuniform quantization forms were also
+explored in the form of log representations [7]. This form can
+also compute multiplier-less multiply and accumulate (MACs)
+operations; however, the distribution of the representations is
+restricted to the log domain.
+There have been several accelerator architecture designs
+for low-precision CNNs with uniform quantization arithmetic.
+Recent literature includes commercial architectures [22], [23]
+and also academic approaches [24]–[28]. The beneﬁts, in terms
+of power and throughput, of ﬁtting a design on-chip was
+Fig. 1. Example of a reconﬁgurable multiplier with the coefﬁcient set
+{12305, 20746}.
+described in [3]. Other FPGA architectures have been imple-
+mented to utilize the highly amenable nature of CNNs which
+constrain weight parameters to be only binary or ternary
+representations [29], [30]. With restrictions in the efﬁciency
+of both software and hardware implementations of neural net-
+works, software-hardware codesign is considered an effective
+approach to achieve optimal performance [31], [32]. A method
+for designing a quantization function for both increasing accu-
+racy of binarized CNNs while maintaining efﬁcient multiplier-
+less hardware was proposed in [33]. In addition, an efﬁcient
+long short-term memory (LSTM) implementation in [34]
+utilized load-balance-aware pruning to achieve both network
+compression and high hardware utilization. Similarly, training
+highly sparse ternary networks and designing efﬁcient CNN
+hardware for exploitation was described in [30]. To the best of
+our knowledge, AddNet is the ﬁrst quantization scheme which
+embeds reconﬁgurability directly into its representations.
+IV . A
+DDNET RECONFIGURABLE MULTIPLIERS
+In this section, we introduce r econﬁgurable multipliers and
+describe their design in AddNet.
+A. Reconﬁgurable Multipliers
+A constant coefﬁcient multiplier is a circuit which computes
+y = cx , using only additions, subtractions, and bit shifts,
+where c is some predeﬁned number. For example, to compute
+y = 6x in terms of additions and shifts, we can use
+(x << 2) + (x << 1) = 6x. (3)
+The “<<” operator represents an arithmetic left shift.
+An RCCM is a circuit which computes y = cs x,
+where cs is an element from a discrete coefﬁcient set
+C ={ c0, c1,..., cN−1}, chosen from a log2(N) bit select
+signal s [35]. RCCMs are usually realized using additions,
+subtractions, bit shifts, and MUXes. Previous work has shown
+potential for reducing resource usage compared with a generic
+multiplier, especially for small values of N [9], [35]–[37].
+Fig. 1 shows an example of an RCCM with coefﬁcient
+set C ={ 12305, 20746}. In this example, there is one
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:45 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 4 ---
+118 IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 1, JANUARY 2020
+2:1 MUX for each adder, each having s as the select line
+input. The three adders sum various shifted versions of x.
+Each adder is assigned a coefﬁcient set where the value of
+each row corresponds to the multiple for each conﬁguration.
+For instance, the top-most adder computes
+
+x + (x << 1) = 3x, if s = 0
+x + (x << 2) = 5x, if s = 1.
+The bottom-most adder outputs the ﬁnal output y with coefﬁ-
+cient set C ={ c
+0, c1}={ 12305, 20746} multiplier-less by
+y =
+⎧
+⎪⎪
+⎪
+⎨
+⎪⎪
+⎪
+⎩
+x + ((x << 3) + ((x + x << 1), if s = 0
+<< 11)< < 1) = 12305x
+(x <<8)+((x+x <<2)+((x+x <<2), if s = 1
+<< 11)< < 1) = 20746x.
+By utilizing MUXes in this way, the computation of c
+1 =
+12305 is able to reuse the adders from computing c2 = 20746
+and vice versa.
+To date, prior research with RCCMs has focused on the
+design of an RCCM for a predeﬁned set of target con-
+stants (e.g., obtained from a digital ﬁlter design). This design
+using minimal resources is an NP-complete optimization prob-
+lem [36]. However, we want to use RCCMs in neural networks,
+where the coefﬁcients (weights) are not known in advance.
+As a result, we invert the RCCM design, and instead of
+searching for an RCCM circuit for a given coefﬁcient set, this
+article aims to ﬁnd one with very low resource usage and a
+maximum of “useful” coefﬁcients. This low-cost RCCM then
+replaces multipliers in a conventional CNN implementation.
+Instead of storing the coefﬁcients, the corresponding select
+values are stored, which also has the side effect that it requires
+fewer bits of storage than the direct coefﬁcient value.
+B. FPGA Multiplier Mapping
+We searched for building blo cks that efﬁciently map to
+the logic fabric of an FPGA. Ou r designs are optimized for
+the latest Xilinx FPGAs (Virtex 5 +6, the seventh generation
+FPGAs and UltraScale/UltraScale + FPGAs), but similar cir-
+cuits can be found for other FPGAs. For these devices, a slice
+provides either six-input LUTs with a single output (used in
+Topology A) or two ﬁve-input LUTs with shared inputs (used
+in Topology B). As such, we designed our base topologies to
+ensure the MUXes ﬁt into the same LUTs that are required
+for the adders.
+Fig. 2 shows the two base topologies used to build the
+RCCM units in this article. Each of these consists of an
+adder with at least one input being the output of a MUX.
+These topologies allow operations of the form ±A
+p ± Bq.F o r
+Topology A, A p can consist of up to four different input values
+( p ∈ 1, ..,4) with A4 = 0a n d Bq can only take one value,
+that is, (q = 1). For Topology B, p ∈ 1, ..,3 with A3 = 0a n d
+q ∈ 1, 2, with B2 = 0. The sign and source signals are selected
+using a 2-bit input signal s. Since there are more possibilities
+than MUX inputs, a function σ( s) is used to choose the actual
+operation, where σ( s) is determined at the design time but
+may be different for each individual RCCM. Note that there
+is another possibility to map more input sources to the adder
+Fig. 2. Base topologies used to build reconﬁgurable multipliers. (a) Topol-
+ogy A. (b) Topology B.
+as described in [38]; however, to ensure the topology ﬁts into a
+single LUT, this comes at a cost of less select inputs. Through
+our experimentation, we found that the chosen topologies were
+sufﬁcient for creating RCCMs with a desired coefﬁcient set
+to simplify the training process. This is further described in
+Section V.
+All contemporary FPGA devices are similar in that their
+logic blocks consist of LUTs followed by a fast carry chain.
+Hence, a simple adder can be extended by MUXes with no
+additional cost for certain MUX sizes when carefully selected
+for the target device. The detailed slice mappings of our base
+topologies are shown in Fig. 3, highlighting how our design
+consumes exactly the same silicon area as a traditional ripple-
+carry adder with the same word size on that FPGA (which
+would only implement the
+XOR gate to complete the carry
+logic to a full adder).
+C. Architectures Considered
+The base topologies described previously can be com-
+bined in many ways to design RCCM units. T opology A
+has the advantage of a potentially larger coefﬁcient set as
+it allows three different sources at input A p. On the other
+hand, Topology B has the property that input Bq can be
+negated or zeroed, which provides symmetric coefﬁcients
+around zero (as A p − B1 =− (−A p + B1)). We designed three
+different RCCM architectures from these t opologies shown
+in Fig. 4. These consist of one to three elements of Topology
+A in the early stages and Topology B at the output stage to
+ensure symmetric coefﬁcients. Symmetric coefﬁcients improve
+the ability to match the distribution of the coefﬁcient sets to
+the pretrained neural network weights which are typically and
+also approximately symmetric around zero. The beneﬁts of
+this are further discussed in Section V. Note also that these
+designs can be trivially pipelined.
+As shown in Fig. 4, the A
+p inputs to the topologies are all
+connected to left shift operations ϕij , which are all hard-wired,
+since these do not require any LUT resources. It follows that
+the supported coefﬁcient set depends on the operation mapping
+function σ( s) and the ﬁxed bit shifts ϕij . As mentioned
+in Section IV-B, each instance of base Topology A or B
+consumes the same area as a traditional ripple-carry adder.
+Hence, as the RCCMs of Fig. 4 consist of two, three, and four
+base topologies, they are, respectively, called 2-Add, 3-Add,
+and 4-Add RCCMs in the following.
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:45 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 5 ---
+FARAONE et al. : AddNet: DEEP NEURAL NETWORKS USING FPGA-OPTIMIZED MULTIPLIERS 119
+Fig. 3. Bit-level FPGA slice mapping of base topologies of Fig. 2. This is a pplicable to any FPGA using six-input LUTs, including Xilinx Ultrascale and
+Intel Stratix X devices. (a) Topology A. (b) Topology B.
+The obtained RCCM architectures can multiply with up
+to 2 ws different coefﬁcients, where ws denotes the total
+number of bits used for the select signal. For the 2-Add,
+3-Add, and 4-Add RCCMs, this translates to w
+s = 4, 6,
+and 8, respectively, as shown in Fig. 4. We chose to evaluate
+coefﬁcient sets where Topology A had four different mapping
+functions and Topology B had a s ingle one. In addition, all
+maximum bit shifts were set to ϕmax = 3. This limits the total
+number of unique combinations, as shown in Table I. With
+these coefﬁcient sets, an exhaustive enumeration of possible
+coefﬁcient combinations is feasible with a few minutes of
+computation time. This allows us to then ﬁnd the desired
+coefﬁcient set based on its similarity to the pretrained neural
+network weight distribution. We note that it may be possible to
+improve on our results by exploring more mapping functions,
+which would generate a larger number of unique coefﬁcient
+sets but at the cost of longer execution time.
+V. A
+DDNET TRAINING
+Section IV described a family of optimized multipliers.
+In this section, we now address the issue of ﬁnding the best
+coefﬁcient set for a given neural network. Neural networks can
+TABLE I
+PROPERTIES OF THE EVA L UAT I O N O F T H EPROPOSED RCCM U NITS WITH
+MAXIMUM POSSIBLE SET SIZE S = 2ws
+typically tolerate a certain amount of regularization for their
+weight representations befo re the accuracy is impinged upon.
+Thus, our strategy is to utilize this knowledge and select an
+RCCM coefﬁcient set which exhibits a distribution similar to
+the distributions of the neural network weights and retrain the
+network to learn the representation of the coefﬁcient set.
+A. Distribution Matching
+To achieve high accuracy in quantized neural network
+training, it is important to reduce quantization error by
+using a function which can efﬁciently map its representations
+to the full-precision values. This is important to minimize
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 28,2026 at 08:08:45 UTC from IEEE Xplore.  Restrictions apply. 

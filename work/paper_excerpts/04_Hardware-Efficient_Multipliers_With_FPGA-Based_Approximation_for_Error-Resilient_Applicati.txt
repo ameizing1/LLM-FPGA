@@ -1,0 +1,454 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Hardware-Efficient_Multipliers_With_FPGA-Based_Approximation_for_Error-Resilient_Applications - TCASI24.pdf
+PAGES: 12
+--- PAGE 1 ---
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 12, DECEMBER 2024 5919
+Hardware-Efficient Multipliers With FPGA-Based
+Approximation for Error-Resilient Applications
+Yi Guo
+ , Member, IEEE, Qilin Zhou, Xiu Chen, Student Member, IEEE, and Heming Sun
+ , Member, IEEE
+Abstract— Approximate multipliers enable hardware savings
+for error-resilient computation-intensive applications. Most exist-
+ing approximate multipliers have been on ASIC-based circuits.
+They might not achieve comparable performance gains when
+used for FPGA-based accelerators. In this paper, we propose
+hardware-efficient FPGA-based accurate and approximate 4 ×
+4 multipliers with novel methodologies of look-up table (LUT)
+sharing and carry switching. The LUT resources can be fully uti-
+lized by sharing two LUTs with the same inputs. To compensate
+for the accuracy loss, the truncated carry is partially reserved by
+switching it to the adjacent calculation. For higher-order multi-
+pliers, three approximate adders are proposed to sum the result of
+the multipliers with arbitrary size. 140 types of 8 × 8 multipliers
+are constructed by combining the proposed 4 × 4 multipliers
+and adders, providing various multiplication choices for different
+demands. The proposed approximate 8 × 8 multiplier can achieve
+up to 38.75%, 17.29%, and 28.17% improvements in power,
+latency, and area over the Xilinx exact multiplier, respectively.
+Moreover, the proposed accurate and approximate 8 × 8 multi-
+pliers with different adders are extended to 16 × 16 multipliers.
+As evidenced by the performance of the 16 × 16 multipliers,
+our methodology demonstrates the capability to design higher-
+order multipliers flexibly. Compared with previous works under
+a similar accuracy loss, the proposed multiplier achieves more
+hardware savings. Furthermore, the approximate multipliers are
+assessed on the application of image processing to validate the
+practical applicability. We create a library of the proposed mul-
+tipliers which is open-source at https://github.com/YnuGuoLab
+/Approx_Mul_FPGA/ and assist in further reproducing and
+development.
+Index Terms— Approximate computing, FPGA, multiplier.
+I. I NTRODUCTION
+W
+ITH the advancement of technology, the primary fac-
+tor limiting the development of integrated circuits is
+Manuscript received 22 January 2024; revised 18 April 2024 and 1 June
+2024; accepted 2 June 2024. Date of publication 1 July 2024; date of
+current version 27 November 2024. This work was supported in part by
+Yunnan Fundamental Research Project under Grant 202301AU070011, in part
+by Yunnan Scientific Research Project under Grant 2023J0015, in part
+by JSPS KAKENHI under Grant JP23H03366, and in part by the Program
+of Yunnan Key Laboratory of Intelligent Systems and Computing under
+Grant 202405A V340009. This article was recommended by Associate Editor
+J. Zhang. (Corresponding author: Yi Guo.)
+Yi Guo is with the Graduate School of Information, Science and Engineering
+and Yunnan Key Laboratory of Intelligent Systems and Computing, Yunnan
+University, Kunming 650106, China (e-mail: guoyi@ynu.edu.cn).
+Qilin Zhou and Xiu Chen are with the Graduate School of Informa-
+tion, Science and Engineering, Yunnan University, Kunming 650106, China
+(e-mail: qilinzhoujob@gmail.com; xiuchenjob@gmail.com).
+Heming Sun is with the Faculty of Engineering, Yokohama National
+University, Yokohama, Kanagawa 240-0067, Japan (e-mail: sun-heming-vg@
+ynu.ac.jp).
+Color versions of one or more figures in this article are available at
+https://doi.org/10.1109/TCSI.2024.3416204.
+Digital Object Identifier 10.1109/TCSI.2024.3416204
+power consumption. Approximate computing is an emerging
+technique that sacrifices computation precision in exchange
+for energy savings in error-tolerant applications. These appli-
+cations involve lots of multiplications, thus the power and area
+dissipations of multipliers become dominant. Currently, the
+design of approximate multipliers is elevating a promising
+method to reduce the hardware consumption of arithmetic
+circuits and multimedia applications. More and more academic
+researches focus on high-efficiency approximate multiplier
+designs.
+Most state-of-the-art works are introduced concentrating on
+ASIC-based circuits. Zhang et al. [1] propose an inexact four-
+gate 4:2 compressor which is used to construct an approximate
+multiplier with low resource. In [2], an algorithm deploying
+inexact compressors is proposed to exploit the design of
+efficient approximate multipliers. Three approximate 4:2 com-
+pressors and two approximate multipliers are introduced in [3],
+aiming at reducing the area and power consumptions, while
+maintaining acceptable accuracy. In [4], three novel approxi-
+mate 4-2 compressors are proposed and utilized in 8-bit multi-
+pliers. Rashidi [5] proposes two approximate multipliers based
+on an approximate 4:2 compressor and two 4-bit full adders.
+An approximate unsigned integer multiplier is presented
+in [6], designed by integrating a mathematically error-reduced
+method with the classical log-based multiplier. Design of
+approximate adders and multipliers based on machine learning
+is introduced in [7]; this design utilizes approximate com-
+pressors and a reduction circuitry with so-called complement
+bits. Ansari et al. [8] use approximate adders to construct two
+optimized logarithmic multipliers. Mrazek et al. [9] present a
+library of 8-bit approximate adders and multipliers.
+Because of the architectural differences between ASICs and
+FPGAs, the use of ASIC-based approximate multipliers on
+FPGAs may result in very modest performance benefits. Fig. 1
+shows the ASIC-based results of three multipliers randomly
+selected from [9], along with the results of their FPGA-based
+implementations. It can be observed that these ASIC-based
+multipliers do not generate comparable power, latency, and
+area gains on FPGAs. Especially, some ASIC-based multipli-
+ers even consume more resources than accurate multipliers on
+FPGAs. Therefore, the following studies on the architecture of
+FPGAs have been carried out to emphasize the requirement for
+FPGA-based system design.
+For FPGA-based signed multiplier, an approximate Booth
+multiplier is introduced in [10] using an inexact radix-8 Booth
+encoder. Ullah et al. [11] present generic area-optimized,
+low-latency accurate and approximate softcore multipliers
+including signed and unsigned multipliers, which exploit
+1549-8328 © 2024 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:54 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 2 ---
+5920 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 12, DECEMBER 2024
+Fig. 1. Implementation results of ASIC-based multipliers (M1, M2, M3) on
+FPGAs.
+the underlying architectural features of FPGAs. In [12],
+an approximate signed array multiplier Booth-Approx with fur-
+ther area and energy reductions is introduced. For FPGA-based
+unsigned multipliers, in [13], the 4×4 and 8×8 multipliers are
+constructed with approximate 4 × 2 multipliers for optimizing
+FPGA-based systems. In [14], the FPGA fabrics are exploited
+to define a methodology for designing approximate multipliers.
+In [15], four approximate 4 × 4 multipliers are presented in
+the manner of reducing area from the exact multiplier on
+FPGAs. Three types of approximate 4 × 4 multipliers are
+introduced in [16] and used for 8 × 8 multipliers. In [17],
+hardware-efficient approximate multipliers are presented on
+FPGAs by using the compact approximate 3-2 compressors
+and approximate 4-2 compressors. To further improve the per-
+formance of FPGA-based multipliers, we present the following
+motivational case study.
+A. Motivational Case Study
+High latency caused by multiple look-up table (LUT) layers
+and carry chains in the accurate multiplier. Approximate mul-
+tipliers are typically introduced based on accurate multipliers.
+However, the traditional FPGA-based accurate multiplier usu-
+ally produces high latency, because of complicated LUT layers
+and long carry propagation. For instance, the critical path of
+an accurate multiplier [14] is occupied by three LUTs and
+three carry chains with strong correlations, undermining the
+efficiency of approximate computing on the multiplier. In order
+to present higher-performance approximate multipliers, the
+first need is to propose an optimized accurate multiplier.
+Large accuracy loss incurred by the elimination of
+LUTs and carry chains in the approximate multiplier. The
+works [11], [13], [14], [15], [16] present the low-complexity
+approximation methods by deleting LUTs or carry chains and
+indeed achieve hardware savings. However, due to the lack
+of carry propagation, most of these multipliers are facing
+one common problem of large accuracy loss. Hence, the
+present challenge lies in devising approximate multipliers
+with enhanced accuracy by computing the carry as much as
+possible.
+The polarized performance of the constructed multipliers
+caused by accuracy-hardware imbalance from adders. Build-
+ing a large-scale multiplier from sub-multipliers and an adder
+is a common method. However, this recursive construction
+might result in additional hardware overhead for the approx-
+imate multipliers [11], [13], [15] compared with traditional
+multipliers. Therefore, it is necessary to propose adders with
+various levels of precision, ranging from high to low smoothly
+trading accuracy for hardware.
+Narrow performance scope of the library due to the scarce
+configurations in building high-order multipliers. In [15],
+a library of approximate 8 × 8 multipliers is constructed
+by combining four inexact 4 × 4 multipliers and one adder.
+However, only 35 types of configurations with similar accuracy
+are provided, which fail to meet the diverse demands of
+different error-tolerant applications. Thus, there is a necessity
+to provide a library with a greater variety of configurations to
+fulfill various performance requirements.
+B. Our Novel Contributions
+To address the aforementioned issues, we propose an
+FPGA-based multiplier design with novel approximation
+methodologies. The main contributions are as follows:
+1) An accurate 4 × 4 multiplier is proposed with a LUT-
+oriented optimization, which has a structure of fewer LUT
+layers. The critical path is occupied by only two LUTs and one
+carry chain, leading to lower latency than previous accurate
+multipliers.
+2) Based on the accurate 4 × 4 multiplier, we propose the
+approximate multipliers with methodologies of LUT sharing
+and carry switching. In the proposed approximate multiplier,
+two LUTs with the same inputs are shared and combined into
+one LUT to save the hardware resource. Additionally, the carry
+in the multiplier is switched into the adjacent computation
+instead of the complete truncation. Because of the proposed
+approximation methodologies, significant hardware savings
+can be achieved under an acceptable accuracy loss.
+3) Three types of approximate adders are proposed with a
+steady and slow decline in accuracy, yet progressive hardware
+improvements. These three adders can be used to construct
+large-scale multipliers with arbitrary sizes. In the adder design,
+a LUT-specific carry prediction scheme is proposed and inte-
+grated. This approach maximizes resource utilization when
+summing the results from sub-multipliers.
+4) A library of the proposed multipliers is created by com-
+bining small-size multipliers and adders, generating diverse
+different configurations. Due to the abundant configurations,
+the performance scope of this library is wide enough to meet
+various requirements. This library is open-source and available
+online at https://github.com/YnuGuoLab/Approx_Mul_FPGA/
+to encourage and help further research in this direction.
+We provide an overview in Fig. 2, demonstrating how our
+proposed approach achieves the above contributions. Section II
+presents the preliminaries required for understanding the
+proposed method. Based on the structure of primary logic
+resources presented in Section II, Section III introduces the
+proposed accurate 4 × 4 multiplier with fewer LUT layers,
+and also further explores the high-efficiency approximate
+4 × 4 multipliers with acceptable accuracy loss. In Section IV
+higher-order multipliers are constructed by the proposed 4 ×
+4 multipliers and four types of adders. The experiment results
+and discussions of the multipliers are shown in Section V
+and VI. Section VII concludes this paper.
+II. P RELIMINARIES
+This paper focuses on the devices of Xilinx 7-series
+FPGA family [18]. Nevertheless, our suggested approach is
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:54 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 3 ---
+GUO et al.: HARDW ARE-EFFICIENT MULTIPLIERS WITH FPGA-BASED APPROXIMATION 5921
+Fig. 2. Summary of the proposed methodology.
+universally applicable and can be implemented on FPGAs
+from other suppliers with 6-input LUT and carry chain, such
+as Intel. The configurable logic blocks (CLBs) are the primary
+computational blocks on modern FPGAs which are utilized for
+implementing any types of sequential or combinatorial circuits.
+One CLB is composed of two slices, with each slice containing
+four 6-input LUTs and one associated carry chain. As shown in
+Fig. 3(a), a 6-input LUT can be utilized as one of the following
+two implementations. The first one is referred to as LUT6
+which implements a 6-input combinational function with a
+single output O. Another one is named LUT6_2 which has
+two 5-input combinational functions with two outputs O5 and
+O6. Any type of LUT can be used for different requirements.
+For instance, when there is a demand to implement a logic
+function with 6 inputs, it can be achieved by employing a
+stand-alone LUT6. In cases where two logic functions share
+the same 5 inputs, their functions can be simultaneously
+accomplished using a single LUT6_2. The function of a
+LUT6 or a LUT6_2 can be defined by an INIT attribute
+which consists of 16 hexadecimal values (i.e. 64 binary values
+for 64 input combinations). The INIT value is determined
+by creating a binary logic table of all input combinations.
+It describes that the logic value ‘1’ occurs on the outputs
+among all 64 combinations. For example, an INIT value of
+‘0000000000000004’ (hex) for LUT6 means that the output
+O is ‘1’ for the input combination ‘000010’.
+In FPGAs, the carry chain usually connects to four 6-input
+LUTs. As shown in Fig. 3(b), four LUTs produce the
+carry-generate and carry-propagate signals. That is, outputs
+O5 and O6 of LUTs are as carry-generate and carry-propagate
+signals for the carry chain, respectively. AX, BX, CX, and DX
+are the bypass signals connecting another slice. Their states
+are inactive by default. Hence, the carry-generate signals of
+the carry chain are driven by the output O5 of the LUT6_2.
+The carry chain performs the function of a 4-bit carry look-
+ahead adder. The output of each column is produced with XOR
+operation on the carry-propagate signal and the carry from the
+previous column.
+III. P ROPOSED ACCURATE AND APPROXIMATE 4 × 4
+MULTIPLIERS
+In this section, a novel accurate 4 × 4 multiplier is first
+proposed, as presented in Section III-A. Based on this accurate
+Fig. 3. The structures of Xilinx FPGA units. (a) One 6-input LUT can
+beconfigured as LUT6 or LUT6_2. (b) Carry chain.
+Fig. 4. (a) The structure of the proposed accurate 4 × 4 multiplier. (b) LUT
+implementation.
+4 × 4 multiplier, four approximate 4 × 4 multipliers with
+two optimization methodologies are proposed. Section III-B
+introduces two approximate 4 × 4 multipliers with the first
+methodology (i.e. LUT sharing), and another two approximate
+4 × 4 multipliers with the second methodology (i.e. carry
+switching) are proposed in Section III-C.
+A. Proposed Optimized Accurate 4 × 4 Multiplier
+Fig. 4 shows the structure of the proposed accurate 4 ×
+4 multiplier, in which A3 ∼ A0 and B3 ∼ B0 indicate two
+4-bit operands and P7 ∼ P0 is the product of this multiplier.
+This 4 × 4 multiplier is designed by dividing it into two 4 ×
+2 multipliers ( A3 A2 A1 A0 × B1 B0 and A3 A2 A1 A0 × B3 B2),
+which are respectively represented by Layer 1 and Layer 2 in
+Fig. 4. The whole 4 × 4 multiplier includes two stages.
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:54 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 4 ---
+5922 IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 12, DECEMBER 2024
+TABLE I
+THE EXPRESSION OF THE PROPOSED ACCURATE 4 × 4 MULTIPLIER
+In Stage 1, eight LUTs are designed in two sets and
+separately utilized on two layers to operate the summation.
+Because each layer involves 6 elements that perfectly match
+6 input ports of one 6-input LUT, the LUT resource can be
+fully utilized. The results of the two layers are represented by
+L1i and L2i, in which L15 ∼ L11 are the results of Layer
+1 and L25 ∼ L21 are the results of Layer 2. The computations
+of the two layers are computed by two parallel sets of LUTs.
+This is more efficient than the traditional method of two LUTs
+in serial connection.
+In Stage 2, L1i and L2i are computed to produce the carry-
+propagate ( Prop i ) and carry-generate ( Gen i ) signals for the
+carry chain. By taking Prop i and Gen i as the input signals,
+the final product ( Pj ) is calculated by the carry chain. The
+critical path of the proposed multiplier is occupied by two
+LUTs and one carry chain.
+The logical expression for each LUT in the proposed
+accurate 4 × 4 multiplier is provided in Table I, where ‘ +’
+is the symbol of the ‘OR’ operation and ‘ ⊕’ represents the
+‘XOR’ operation.
+B. LUT Shared Approximate 4 × 4 Multiplier (LSAM) With
+Carry Chain
+On the basis of the proposed accurate multiplier, two
+approximate 4 × 4 multipliers with carry chains are devel-
+oped. For these two approximate multipliers, a novel design
+methodology of LUT sharing is proposed, which combines
+and reorganizes two LUTs with the same inputs.
+1) LUT Shared Approximate Multiplier 1 (LSAM1): As
+can be observed from the structure of the proposed accurate
+multiplier, the inputs of LUT10 and LUT13 are the same 5 ele-
+ments (i.e. L21, L13, L12, B2, and A0). Additionally, the LUT
+types of LUT 10 and LUT 13 are LUT6_2 and LUT5, respec-
+tively. For more efficient utilization of LUT resources, the
+LUT6_2 can be shared while LUT5 is eliminated. As shown in
+Fig. 5(a), in LSAM1, the LUT10 and LUT13 are combined and
+Fig. 5. Structure difference. (a) Accurate multiplier and LSAM1. (b) LSAM1
+and LSAM2.
+TABLE II
+THE INIT VALUE OF LSAM1
+TABLE III
+ERROR OCCURRENCES IN LSAM1
+reorganized by deleting LUT13 and retaining its logic functions
+in LUT10. The carry-in signal Cin of the carry chain in LSAM1
+is set as ‘0’. In other words, the sole difference between the
+proposed accurate multiplier and LSAM1 is the elimination of
+LUT13.
+The INIT values of expressions in LSAM1 are illustrated in
+Table II, which are the attributes mapping the logic functions
+to LUTs. Table III presents the error occurrence of LSAM1.
+The probability of an error caused by deleting LUT 13 is only
+0.023 ( = 6/256). The probability of error occurrence is low
+because the error is limited to P3 and not passed to the higher
+order.
+2) LUT Shared Approximate Multiplier 2 (LSAM2): Based
+on LSAM1, the method of LUT sharing is further applied to
+the multiplier, and LSAM2 is proposed. As shown in Fig. 5(b),
+for LSAM2, the results of L14/15 and L24/25 are computed by
+LUT4′ and LUT 8′ respectively, instead of four LUTs (LUT 3,
+LUT4 and LUT 7, LUT8) in LSAM1. The reason for this
+approximation and sharing strategies are explained as follows.
+As illustrated in Table I, the elements used in the computa-
+tions of LUT 2/3/4 are the same. This provides the possibility
+of selecting two of LUT 2/3/4 to share one LUT by truncating
+the carry from column 1 (i.e. truncate A0 A1 B0 B1). Based
+on the logic functions of L13, L14, and L15, we analyze
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:54 UTC from IEEE Xplore.  Restrictions apply. 
+
+--- PAGE 5 ---
+GUO et al.: HARDW ARE-EFFICIENT MULTIPLIERS WITH FPGA-BASED APPROXIMATION 5923
+the error occurrences caused by the truncation and decide
+the sharing strategy. With the truncation of the carry, the
+expressions of L13, L14, and L15 are changed and errors occur.
+Here, we take the error situation in L13 as an example to
+explain. After the carry truncation, the expression of L13 is
+changed from A3 B0 ⊕ A2 B1 ⊕ (A1 A2 B0 B1 + A0 A1 B0 B1) to
+A3 B0 ⊕ A2 B1 ⊕ A1 A2 B0 B1. When all the values of A0, A1,
+B0, and B1 are ‘1’ and the value of A2 is ‘0’, the errors occur
+and involve 8 combinations. Similarly, the error occurrences
+of L14 and L15 can be analyzed and obtained as both 4.
+Then, based on the carry truncation, three LUT sharing
+strategies are formulated and then determined by calculating
+the error distance (ED) in different strategies. In Strategy 1,
+one LUT is shared by L13 and L14. The ED is calculated
+by combining the error occurrence combination of L13 and
+L14 with their corresponding weights. The ED of Strategy 1
+is computed as :
+ED1 = 23 × 8 + 24 × 4 = 128 (1)
+Strategy 2 is formulated as L13 and L15 share one LUT. The
+ED of this operation is calculated as :
+ED2 = 23 × 8 + 25 × 4 = 192 (2)
+In Strategy 3 , one LUT is shared by L14 and L15. It is
+worth noting that, elements incurring error to L14 and L15
+are the same. When an error occurs, the value of L14 changes
+from 0 to 1 yet L15 changes from 1 to 0. Hence, the errors in
+L15 partially compensate the errors in L14. The ED of Strategy
+3 is calculated as :
+ED3 = (25 − 24) × 4 = 64 (3)
+As can be observed from (1), (2), and (3), ED3 is smaller
+than ED1 and ED2. To lower the accuracy loss, Strategy 3
+is determined for LSAM2 in which L14 and L15 share one
+LUT and are reorganized into LUT 4′ as shown in Fig. 5(b).
+Similarly, the computations of L24 and L25 can be imple-
+mented by sharing one LUT and reorganizing as LUT 8′.
+Compared with LSAM1, the error occurrence of LSAM2
+increases from 6 to 13.
+C. Carry Switched Approximate 4 × 4 Multiplier (CSAM)
+With No Carry Chain
+The carry chain is efficient to perform the addition, while it
+consumes dominant hardware resources in the multiplier [15].
+Designing approximate multipliers with no carry chain is
+a hardware-efficient method yet incurs an increase in error.
+To lower the accuracy loss caused by no carry chain, we pro-
+pose the methodology of carry switching to partially reserve
+the carry signal instead of complete carry truncation.
+1) Carry Switched Approximate Multiplier 1 (CSAM1):
+Fig. 6 shows the structure of CSAM1 that is implemented
+by 10 LUTs. The methodology of carry switching is applied
+on the calculations of P3 and P4 as introduced as follows.
+CSAM1 is designed based on LSAM2, in which calculat-
+ing higher-order results ( P7 ∼ P4) requires the carry from
+lower-order columns (columns 3 ∼0). This carry is calculated
+as:
+carry term 1 = L13L21 + L13L12 A0 B2 + L21L12 A0 B2 (4)
+Fig. 6. (a) The structure of CSAM1 (b) LUT implementation.
+The exact calculations for P3 and P4 are expressed as :
+P3−exact = L13 ⊕ L21 ⊕ (L12 A0 B2) (5)
+P4−exact = L14 ⊕ L22 ⊕ carry term 1 (6)
+It can be seen that the number of elements for calculating
+P4−exact exceeds the maximum number of inputs in LUT6. For
+calculating P4 by one LUT6, carry term1 is truncated. In this
+way, the value of P4 is wrong when carr y term 1 equals to ‘1’.
+This involves two conditions: condition 1 , two of L13, L21,
+and L12 A0 B2 are ‘1’; condition 2, all the value of L13, L21,
+and L12 A0 B2 are ‘1’. The combination of the errors in both
+conditions results in an excessive accuracy loss. Fortunately,
+elements in carry term1 are the same as those used to compute
+P3−exact . To reduce the error caused by the truncation of
+carry term1 from the logic expression of P4, carry term1 is
+switched to the logic expression of P3 instead of complete
+truncation directly.
+There are two methods to dispose switched carry term1.
+Method 1 is that ‘ P3 + carry term1’ (i.e. OR operation on P3
+and carry term1), while method 2 is ‘ P3 ⊕ carry term1’ (i.e.
+XOR operation on P3 and carry term1). The errors caused
+by condition 1 and condition 2 can be partially compensated
+by method 1 and method 2 , respectively. Obviously, the
+occurrence probability of condition 1 is higher than that of
+condition 2 . Hence, carr y term 1 is switched from P4 to P3
+by method 1 of ‘ P3 + carry term1’. P3 and P4 in CSAM1 are
+calculated as:
+P3−C S AM1 = L13 ⊕ L21 ⊕ (L12 A0 B2) + carry term 1 (7)
+P4−C S AM1 = L14 ⊕ L22 (8)
+When two of L13, L21, and L12 A0 B2 are ‘1’, due to the
+carry switching between P3 and P4, the value combination of
+‘P4 P3’ switches from ‘10’ to ‘01’. The error distance ‘01’ is
+smaller than the error distance ‘10’ caused by complete carry
+truncation. The logical expression for each LUT in CSAM1
+is provided in Table IV.
+Authorized licensed use limited to: ShanghaiTech University. Downloaded on January 08,2026 at 06:15:54 UTC from IEEE Xplore.  Restrictions apply. 

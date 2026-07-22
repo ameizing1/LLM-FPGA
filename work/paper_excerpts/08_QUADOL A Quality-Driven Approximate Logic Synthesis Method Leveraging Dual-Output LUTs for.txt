@@ -1,0 +1,586 @@
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\QUADOL A Quality-Driven Approximate Logic Synthesis Method Leveraging Dual-Output LUTs for Modern FPGAs.pdf
+PAGES: 7
+--- PAGE 1 ---
+2026 Design, Automation & Test in Europe Conference (DATE 2026)	
+ 978-3-9826741-1-7/DATE26/© 2026 EDAA 
+	QUADOL: A Quality-Driven Approximate Logic Synthesis Method Leveraging Dual-Output
+LUTs for Modern FPGAs
+Jian Shi 1, Chang Meng 2, Xuan Wang 3, and Weikang Qian 1
+1Global College, Shanghai Jiao Tong University, Shanghai, China; 3Synopsys, Inc., Shanghai, China
+2Department of Mathematics and Computer Science, Eindhoven University of Technology, Eindhoven, Netherlands
+Emails: timeshi@sjtu.edu.cn, c.meng@tue.nl, wangxuan@synopsys.com, qianwk@sjtu.edu.cn
+Abstract— Modern FPGAs support dual-output LUT to reduce
+the area of FPGA designs. Several existing works explored the
+use of dual-output LUTs in approximate computing. However,
+they are limited to small-scale arithmetic circuits. To address this
+issue, we propose QUADOL, a qu
+ality-driven a pproximate logic
+synthesis (ALS) method leveraging d ual-output LUTs for modern
+FPGAs. It can approximately merge two single-output LUTs into a
+dual-output LUT. The selection of LUTs for approximate merging
+is formulated as a maximum matching problem to maximize
+area savings. To further enhance existing ALS methods, we also
+propose QUADOL+, a generic framework to integrate QUADOL
+into existing ALS methods. Experimental results showed that
+QUADOL+ achieves significant area reduction over prior works.
+Index Terms—Approximate Computing, Approximate Logic
+Synthesis, Dual-output LUT, Approximate LUT Merging, FPGA
+I. I NTRODUCTION
+Many modern applications, such as image processing and
+machine learning, are computationally intensive yet error-
+tolerant [1]. Approximate computing leverages this tolerance to
+trade accuracy for improved performance and energy efficiency.
+One important area of approximate computing is designing ap-
+proximate circuits for field-programmable gate array (FPGA),
+which is composed of reconfigurable look-up tables (LUTs).
+Modern FPGAs support advanced dual-output LUTs, which
+enable dramatic reduction of the number of required LUTs [2]–
+[5]. A notable method was proposed to exactly merge two
+single-output LUTs into one dual-output LUT using local
+refinement strategies [6]. This process is called LUT merging,
+and the two merged LUTs are called a LUT pair.
+Several works explored the use of dual-output LUTs in the
+design of approximate arithmetic units on FPGAs [7]–[14].
+However, they can only be applied to specific types of circuits,
+such as multipliers [8]–[14] and adders [7]. In addition, they
+can only be applied to small-scale circuits. For example, the
+bit-widths of the multipliers in [8]–[13] do not exceed 8.
+To design general approximate circuits, approximate logic
+synthesis (ALS) for FPGA was proposed [15]–[19]. It aims
+to automatically generate a high-quality circuit with a small
+error but a large area and delay reduction [20]. For example,
+Meng et al. proposed ALSRAC, which iteratively replaces
+signals in an AND-inverter graph (AIG) with new functions
+derived from existing signals, and maps the approximated AIG
+into LUTs [17]. Xiang et al. proposed to iteratively decompose
+a Boolean function approximately to minimize the number of
+This work is supported by the National Natural Science Foundation of China
+under Grant 62574132 and the Natural Science Foundation of Shanghai under
+Grant 25ZR1401189. Corresponding author: Weikang Qian.
+LUT-5    
+LUT-5    
+1
+0
+LUT6_2
+Fig. 1: Architecture of dual-output LUTs in the UltraScale+
+series FPGA.
+LUTs [18]. However, existing ALS methods on FPGA only
+consider single-output LUTs and fail to leverage dual-output
+LUTs available on modern FPGAs.
+To solve the above issues, we propose QUADOL, a qu ality-
+driven ALS method leveraging d ual-output L UTs for modern
+FPGAs. Our main contributions are as follows:
+• We propose an approximate LUT merging technique,
+which approximately merges a LUT pair into a dual-output
+LUT to reduce the number of LUTs needed for a design,
+while minimizing the error introduced by approximation.
+• To maximize area savings, we formulate a maximum
+matching problem to select a maximal number of LUT
+pairs for approximate merging.
+• Based on the above techniques, we propose QUADOL, a
+new ALS method leveraging dual-output LUTs. We also
+propose to use binary search to accelerate QUADOL.
+• To further enhance existing ALS methods, we also in-
+troduce QUADOL+, a generic framework for integrating
+QUADOL into existing ALS methods.
+• We make the code for QUADOL and QUADOL+ open-
+sourced at https://github.com/SJTU-ECTL/QUADOL.
+Experimental results showed that QUADOL+ reduces the
+LUT count by up to 17.9% compared to the state-of-the-art
+ALS method for FPGA. Moreover, the approximate multipliers
+optimized by QUADOL+ dominate most prior FPGA-based
+approximate multipliers in the area-error plane.
+II. P RELIMINARIES
+A. Dual-output LUT
+A LUT with k inputs, denoted as LUT-k, can represent
+any Boolean function with k inputs. In several modern FPGA
+architectures, two small LUTs can be merged into a dual-output
+LUT, reducing the area of the design. In this work, we focus
+on the dual-output LUT architecture in the UltraScale+ series
+FPGA [2], which is shown in Fig. 1. The dual-output LUT,
+denoted as LUT6
+2, is composed of two LUT-5s, A and B,
+sharing five same inputs I0, . . . , I4. In Fig. 1, the output from
+LUT B provides the first output O5, while the second output
+
+--- PAGE 2 ---
+O6 is determined by an additional input I5 that selects between
+the outputs of the two LUT-5s.
+B. Error Metrics
+Error metrics are used to evaluate the accuracy of approxi-
+mate circuits. In this work, two error metrics are used: error
+rate (ER) and mean relative error distance (MRED). ER is the
+probability that the circuit output is wrong. MRED measures
+the average relative error distance, calculated as MRED =P2I
+i=1
+| ˆyi−yi|·pi
+max{yi,1} , where I is the number of primary inputs (PIs),
+yi and ˆyi are integers encoded by the exact and approximate
+outputs, respectively, for the i-th input combination, and pi is
+the probability of the i-th input combination. The denominator
+is set as max {yi, 1} to avoid division by zero.
+In practice, for efficiency, ER and MRED are estimated
+via random logic simulation over M randomly sampled input
+combinations under a given distribution instead of using all
+possible input combinations [15], [17], [18].
+III. M ETHODOLOGY
+This section details the methodology of QUADOL and
+QUADOL+, both targeting combinational circuits. Sec-
+tion III-A introduces the basic idea of approximate LUT
+merging. To reduce the error introduced by approximate LUT
+merging, Section III-B presents a method to identify the optimal
+configuration for the dual-output LUT merged from a LUT pair.
+Section III-C formulates the LUT pair selection problem as a
+maximum matching problem to maximize merging opportunity.
+Based on the above techniques, Sections III-D and III-E finally
+present the flows of QUADOL and QUADOL+, respectively.
+A. Approximate LUT Merging
+Traditional LUT merging combines two single-output LUTs
+(i.e., a LUT pair) into one LUT with dual outputs. The con-
+straints for exactly merging two LUTs are strict. For instance,
+merging two distinct LUT-6s into a LUT6
+2 shown in Fig. 1 is
+infeasible since the output O5 can only express a function with
+up to five inputs. To further reduce the number of used LUTs,
+we propose approximate LUT merging. It allows approximately
+merging two single-output LUTs into a dual-output LUT, while
+only introducing a minimal error.
+Suppose that the functions of the two single-output LUTs
+are F and G, respectively, and their input signals are IF and
+IG, respectively. After the approximate LUT merging, the dual-
+output LUT implements approximate versions of F and G,
+denoted as eF and eG, respectively, and the input signals of the
+dual-output LUT are also properly configured, denoted as IF,G.
+Fig. 2 shows an example of approximate LUT merging, where
+we assume that the single-output LUTs are LUT-3s and the
+truth table of a Boolean function is represented by a row vector.
+To implement F and G with a dual-output LUT, we introduce
+approximation by flipping some entries in their truth tables, i.e.,
+the red entries in Fig. 2(b).
+In what follows, for simplicity, we use the term “merging
+functions F and G” to mean merging their corresponding
+LUTs, and we denote the merged LUT pair F and G as (F, G).
+(a)
+ (b)
+Fig. 2: Approximately merging two single-output LUTs into
+one dual-output LUT: (a) before merging; (b) after merging.
+For a given LUT pair (F, G), we aim to reduce the error
+introduced by the approximate functions eF and eG after ap-
+proximate merging. To measure the error brought by different
+choices of eF and eG, we introduce the concept of Hamming
+Distance (HD). Specifically, the HD between an exact function
+Y and its approximate function eY is defined as the number of
+the input combinations where Y and eY have different output
+values. We denote it as HD(Y, eY ). For the example in Fig. 2(b),
+HD(F, eF ) = 1 and HD(G, eG) = 2. We define the error e
+brought by approximating F and G into eF and eG as:
+e = HD(F, eF ) +HD(G, eG). (1)
+The objective is to find functions eF and eG that minimize the
+error e under the constraint that eF and eG must be realizable
+by the dual-output LUT architecture.
+B. Configuring Dual-output LUT for Approximate Merging
+This section proposes a method to determine the optimal
+configuration for the dual-output LUT. Most commercial FP-
+GAs use LUT-6s as their fundamental LUT units [2]–[5].
+Once a circuit is mapped into such FPGAs, LUT-5s and LUT-
+6s occupy a large percentage of all mapped LUTs, and by
+approximately merging these LUTs into dual-output LUTs,
+we can substantially reduce the total LUT count. Therefore,
+we focus on approximately merging LUT-5s and LUT-6s in
+this work. Specifically, we target three types of LUT pairs
+for approximate merging: 1) two LUT-6s sharing six identical
+inputs; 2) two LUT-6s sharing five identical inputs; 3) one LUT-
+6 and one LUT-5 sharing five identical inputs. We call these
+three type of LUT pairs mergeable LUT pairs. Moreover, we
+focus on the dual-output LUT architecture shown in Fig. 1.
+However, it is worth noting that our method can be adapted to
+other architectures with simple modifications. Next, we discuss
+how we approximately merge the three types of LUT pairs.
+1) Merging two LUT-6s sharing six identical inputs: Let
+F and G be the functions of two LUT-6s sharing six in-
+puts x0, x1, . . . , x5. The configuration of LUT6
+2 depends on
+the signals assigned to I0, I1, . . . , I5 and the assignment of
+F and G to two outputs O5 and O6 of the LUT6 2. To
+minimize the error introduced by approximate LUT merging,
+we should keep as many original inputs as possible. Thus,
+five out of x0, x1, . . . , x5 should be assigned to I0, I1, . . . , I4.
+The remaining input, denoted as xi, is assigned to I5 or not
+used. Therefore, I5 is chosen from the set {1, xi,
+xi}, where
+i ∈ {0, 1, . . . ,5}, and I0, I1, . . . , I4 are assigned with the other
+inputs signals. Note that
+• The choices of I5 include xi. This is because due to the
+configurability of the truth table of a LUT, the signal xi
+can be generated by negating the output of the LUT of xi.
+In this case, for each LUT originally using xi as an input,
+
+--- PAGE 3 ---
+TABLE I: Configurations for LUT6 2 when merging two LUT-
+6s with six identical inputs.
+I5 F G LUT A LUT B
+xi O6 O5 Fxi Maj(Fxi , Gxi , Gxi )
+xi O5 O6 Gxi Maj(Fxi , Fxi , Gxi )
+xi O6 O5 Fxi Maj(Fxi , Gxi , Gxi )
+xi O5 O6 Gxi Maj(Fxi , Fxi , Gxi )
+xi O6 O6 Fxi or Gxi Fxi or Gxi
+1 O6 O5 Fxi or Fxi Gxi or Gxi
+to keep its global function, we should change its local
+function by replacing input xi with xi. The only exception
+is that when xi is a PI or a primary output (PO), xi is not
+considered, as we need additional LUTs to generate xi.
+• The choices of I5 do not include 0. This is because when
+the constant 0 is assigned to I5, LUT-5 A is not used (see
+Fig. 1), which has a larger error compared to the case
+where I5 is assigned with constant 1.
+For functions F and G, they are derived from the set
+{O5, O6}. Based on the above discussion, we list all config-
+urations in Table I. Next, we will discuss how to derive the
+optimal functions for LUT-5s A and B for each configuration.
+Row 1 of Table I corresponds to the case wherexi is assigned
+to I5, and F and G are derived from O6 and O5, respectively.
+By Shannon decomposition, the approximate expressions for F
+and G can be written as eF = xiA +
+xiB and eG = xiB + xiB,
+respectively, where A and B represent the functions for LUT-
+5s A and B in Fig. 1, respectively. Since F = xiFxi + xiFxi,
+where Fxi and Fxi are the cofactors of F when xi is true and
+false, respectively,HD(F, eF ) equals HD(A, Fxi )+HD(B, Fxi ).
+Similarly, HD(G, eG) =HD(B, Gxi ) +HD(B, Gxi ). Therefore,
+HD(F, eF ) +HD(G, eG) equals HD(A, Fxi ) +HD(B, Fxi ) +
+HD(B, Gxi )+ HD(B, Gxi ). To minimize the term HD(A, Fxi ),
+A should be set to Fxi. To minimize the remaining parts, B
+can be determined through the majority among Fxi, Gxi and
+Gxi, i.e., B = Maj(Fxi , Gxi , Gxi ) [21].
+Row 2 of Table I corresponds to the case wherexi is assigned
+to I5, and G is mapped to O6 and F to O5. It is equivalent to
+swapping F and G in row 1. Thus, A and B can be directly
+obtained by swapping F and G in the expressions for A and
+B in row 1. Rows 3 and 4 of Table I correspond to assigning
+xi to I5, which is equivalent to swapping xi and xi in rows 1
+and 2. Thus, A and B can be derived by swapping xi and xi
+in the expressions for A and B in rows 1 and 2.
+Row 5 of Table I covers a special case where xi is assigned
+to I5, and both F and G are derived from O6. In this case,
+HD(F, eF ) +HD(G, eG) equals HD(A, Fxi ) +HD(B, Fxi ) +
+HD(A, Gxi ) +HD(B, Gxi ). Thus, A is set to either Fxi or
+Gxi, and B to either Fxi or Gxi, as both options yield the
+same total HD. To determine the optimal choice, a simulation
+for each choice is performed, and the one causing the least
+error in the POs is chosen. Note that we ignore the case where
+xi is assigned to I5 and both F and G are derived from O6. Its
+optimal solution can be derived by swapping the expressions
+for A and B in row 5, and the optimal total HD is the same.
+Also, we ignore the case where both F and G are derived from
+O5, as it leaves LUT-5 A unused, causing a higher error than
+the case represented by row 5.
+Row 6 of Table I presents another special case where the
+constant 1 is assigned to I5, making LUT6
+2 operate as two
+separate LUT-5s, with one producingF and the other producing
+G. Suppose LUT A produces F and B produces G. As a result,
+F is derived from O6, and G from O5. Thus, A should be either
+Fxi or Fxi, and B should be either Gxi or Gxi. Note that there
+is no need to consider the case where LUT A produces G and
+B produces F , as it yields the same optimal total HD.
+In the proposed approximate LUT merging method, the
+optimal total HD for each row in Table I is calculated. The
+configuration with the smallest total HD is selected as the
+optimal configuration for xi. Since xi is unknown, we perform
+the above procedure for each xi ∈ {x0, x1, . . . , x5}. Among
+these choices, we select the one with the smallest total HD as
+the optimal solution for merging F and G. To further improve
+accuracy, we actually consider two function pairs, (F, G) and
+(
+F , G), for approximate merging. The pair with the smallest
+HD is eventually selected. If (F , G)is selected, an input
+negation is performed on the LUTs with F as an input to restore
+their functions. Note that the pairs (F ,G) and (F, G) are not
+considered, as their configurations can be derived by negating
+A and B from those of (F, G) and (
+F , G), respectively, yielding
+the same HDs and errors in the POs.
+2) Merging two LUT-6s sharing five identical inputs: Let
+the shared inputs of F and G be x0, x1, . . . , x4 and the
+unique inputs of F and G be m and n, respectively. Thus,
+functions F and G are independent of n and m, respectively. In
+LUT6 2, both O6 and O5 depends on I0, I1, . . . , I4, while O5
+is independent of I5. Therefore, to minimize the approximation
+error, a good choice is to assign the shared inputs of F and
+G, x0, x1, . . . , x4, to I0, I1, . . . , I4. Similar to merging two
+LUT-6s with six identical inputs, the remaining input, I5,
+should be chosen from the set {1, m,m, n,n}. Table II lists
+all configurations for the LUT6 2.
+As shown in Table I, when merging two LUT-6s with six
+identical inputs, after assigning xi to I5, the assignment of
+F and G to two outputs O6 and O5 of the LUT6 2 should
+be further considered since F and G both depend on xi.
+In contrast, merging two LUT-6s with five identical inputs
+yields more deterministic assignments. For example, when m is
+assigned to I5, G should be mapped to O5, as G is independent
+of m. Accordingly, F is assigned to O6. This principle also
+applies when I5 is set to n,
+m, or n, where the function
+independent of the selected signal is always assigned to O5.
+Rows 1–4 in Table II correspond to these four cases. The
+optimal configurations for A and B for each case are derived
+based on cofactors and Shannon decomposition in a similar
+way as merging two LUT-6s sharing six identical inputs. Row
+5 presents the case where constant 1 is assigned to I5. It is
+similar to the case corresponding to the last row of Table I and
+hence, its optimal configuration can be derived similarly.
+3) Merging one LUT-6 and one LUT-5 sharing five identical
+inputs: Let F be the function for the LUT-6 and G be the
+function for the LUT-5. Denote their shared five inputs as
+x0, x1, . . . , x4 and the unique input for F as m. Thus, G is
+independent of m. By a similar analysis used above, we can
+
+--- PAGE 4 ---
+TABLE II: Configurations for LUT6 2 when merging two
+LUT-6s with five identical inputs.
+I5 F G LUT A LUT B
+m O6 O5 Fm Maj(Fm, Gn, Gn)
+n O5 O6 Gn Maj(Fm, Fm, Gn)
+m O6 O5 Fm Maj(Fm, Gn, Gn)
+n O5 O6 Gn Maj(Fm, Fm, Gn)
+1 O6 O5 Fm or Fm Gn or Gn
+TABLE III: Configurations for LUT6 2 when merging a LUT-
+6 and a LUT-5 with five identical inputs.
+I5 F G LUT A LUT B
+m O6 O5 Fm Fm or G
+m O6 O5 Fm Fm or G
+1 O6 O5 Fm or Fm G
+obtain all configurations for LUT6 2 listed in Table III.
+C. Selecting Multiple LUT Pairs
+To reduce the number of LUTs used in the final design,
+we try to merge as many LUT pairs as possible. However,
+conflicts may arise when multiple candidate LUT pairs share a
+common LUT. For example, if LUT pairs (F, G) and (G, K)
+are individually mergeable, they cannot be merged simulta-
+neously, as signal G cannot be driven by multiple sources.
+Therefore, when two LUT pairs share the same LUT member,
+they are in conflict and cannot be merged simultaneously. To
+maximize area reduction, we select the largest subset of non-
+conflicting LUT pairs. To achieve this, a graph is constructed
+where each node represents a LUT, and an edge between two
+nodes means that the pair of LUTs corresponding to the two
+nodes is mergeable, i.e., belonging to the three types of LUT
+pairs described in Section III-B. Fig. 3(a) shows an example
+of such a graph with 6 LUTs. Our goal is to identify the
+maximum number of disjoint edges, which can be efficiently
+solved using a maximum matching algorithm [22]. All LUT
+pairs corresponding to the identified edges are then merged
+simultaneously to form an approximate circuit. For example, as
+shown in Fig. 3(a), the three LUT pairs denoted as the edges
+marked with red circles can be merged simultaneously.
+Results of Maximum MatchingMergeable LUT Pair Skipped LUT Pair
+(a)
+ (b)
+Fig. 3: Two different maximum matching solutions.
+A given graph may have multiple maximum matching so-
+lutions. For example, Figs. 3(a) and (b) show two distinct
+maximum matchings for the same graph. As obtaining all
+such solutions is computationally expensive, we propose a
+randomized method to find k different maximum matching
+solutions for each graph, where k is a user-specified number.
+Specifically, once a new maximum matching solution is found,
+one of its LUT pairs is randomly chosen and excluded from
+the search for the next solution. For example, the dashline in
+Fig. 3(b) means that the LUT pair is randomly chosen and
+excluded after the solution in Fig. 3(a) is found. This ensures
+that the new solution in Fig. 3(b) is different from the initial
+solution in Fig. 3(a).
+Neither More
+nor Fewer
+Mergeable LUT Pair (Lighter color represents larger error to the primary output)
+LUT
+(a)
+Mergeable LUT Pairs
+(b)
+Candidate LUT Pairs
+(c)
+Start
+First Iteration
+Find Maximum
+Matchings
+Matching #2Matching #1
+(d)
+All Errors
+Exceed      ?
+Yes No
+More Candidates
+(f)
+Fewer Candidates
+(e)
+Next
+Iteration
+(g)
+Merged LUT PairPruned LUT Pair
+Newly-Pruned LUT Pair New Candidate LUT Pair
+Logic Simulation
+Approximate
+Netlist
+Exact Netlist
+Fig. 4: The overall flow of QUADOL.
+D. Flow of QUADOL
+This section presents the entire flow of QUADOL, which
+is based on the approximate dual-output LUT configuration
+method in Section III-B and the LUT pair selection method in
+Section III-C. Fig. 4 illustrates the overall flow of QUADOL.
+It leverages the idea of binary search to speed up the process.
+Initially, QUADOL identifies all mergeable LUT pairs in the
+given exact netlist (see Fig. 4(a)), which are represented by
+the edges in Fig. 4(b). However, some of them may induce
+large errors after approximate LUT merging and, hence, should
+be pruned before the search for optimal LUT pairs. Thus, for
+each LUT pair, QUADOL evaluates its error at the POs using
+random logic simulation (see Section II-B). In Fig. 4, lighter-
+colored edges represent LUT pairs with larger errors. Then,
+QUADOL starts an iterative process, illustrated in Figs. 4(c)–
+(f). In the first iteration, half of the LUT pairs with the largest
+errors are pruned, indicated by the red crosses in Fig. 4(c).
+The remaining LUT pairs are referred to as candidate LUT
+pairs. Then, as shown in Fig. 4(d), QUADOL searches for k
+maximum matching solutions, where k = 2in this example. For
+each solution, all matched LUT pairs are merged, resulting in
+k approximate circuits. These circuits are evaluated via random
+simulation to get their errors. If their errors all exceed the
+given error bound eb, half of the current candidate LUT pairs
+with larger errors are further pruned, indicated by the green
+crosses in Fig. 4(e). Otherwise, if any circuit satisfies the error
+bound, half of the previously pruned LUT pairs with smaller
+errors are reconsidered as the candidate LUT pairs in the next
+iteration, indicated by the dashed edges in Fig. 4(f). This binary
+search-inspired process continues until the candidate LUT pairs
+can neither be increased nor decreased. Then, k maximum
+matchings are randomly constructed over the current candidate
+LUT pairs, and the one with the lowest output error is selected
+as the final solution (see Fig. 4(g)).
+E. Flow of QUADOL+
+Since QUADOL explores a new dimension, i.e., approxi-
+mately merging LUT pairs into dual-output LUTs, which is
+never considered by the previous ALS methods, it can be
+integrated with any existing ALS methods to strengthen them.
+Thus, we also propose QUADOL+, a generic framework to
+integrate QUADOL into existing ALS methods. Given an exact
+netlist and several other ALS methods, QUADOL+ first applies
+
+--- PAGE 5 ---
+these ALS methods to the exact netlist to generate many
+intermediate approximate netlists. Then, it calls QUADOL to
+further optimize the intermediate netlists. Finally, it returns the
+best result optimized by QUADOL as the final result.
+IV. E XPERIMENTAL RESULTS
+This section presents the experimental results. We conduct
+all experiments on a 64-core AMD Threadripper PRO 5995WX
+CPU running at 2.7GHz with 512GB RAM and use 32 cores for
+our experiments. In our experiments, we set the inputs for each
+circuit to be uniformly distributed. Each random logic simula-
+tion used for measuring the error at the POs uses 131,072 (2 17)
+uniformly-distributed input patterns. The area ratio, defined as
+the number of LUTs in the approximate circuit over that of the
+exact one, and the runtime of various approaches are reported.
+The number of maximum matching solutions per iteration, k, is
+set to 16. All generated approximate circuits were successfully
+synthesized using AMD Xilinx Vivado 2022.2 [23].
+A. Comparison with Prior ALS Methods
+In this section, we compare QUADOL and QUADOL+ with
+two state-of-the-art ALS methods for FPGA, ALSRAC [17] and
+Xiang’s method [18]. Both ALSRAC and Xiang’s method are
+executed 10 times per error constraint. The best result among
+the 10 trials along with its corresponding runtime is reported
+for comparison. The intermediate AIGs from the best trial of
+ALSRAC are mapped to LUT-6 netlists, which are used as
+the intermediate netlists for QUADOL+. Both QUADOL and
+QUADOL+ are executed once.
+Some large circuits from the EPFL [24] and IWLS [25]
+benchmark suites are used to evaluate the performance of
+QUADOL and QUADOL+. Table IV lists these circuits, along
+with their AIG node counts and the LUT numbers after
+mapping. EPFL circuits have already been mapped to LUT-
+6s. For IWLS circuits, which are not initially mapped to LUT-
+6s, we fully optimize them and map them to LUT-6s using
+ABC [26] with the script “sweep; strash; resyn2 × 10; if -K 6;”.
+TABLE IV: Benchmarks used in our experiments.
+IWLS Benchmark EPFL Arithmetic
+Circuit #AIG
+Nodes #LUTs Circuit #AIG
+Nodes #LUTs Circuit #AIG
+Nodes #LUTs
+apex1 1090 490 rd84 500 131 divisor 57247 3267
+apex3 1143 527 rot 839 188 log2 32060 6567
+apex4 1423 799 seq 2952 883 multiplier 27062 4919
+cps 1329 434 table3 755 333 sine 5416 1227
+dalu 2626 228 table5 734 291 sqrt 24618 3074
+des 2509 1104 vda 198 237 square 18486 3241
+ex5p 1471 526
+1) Comparison under ER constraint: We compare
+QUADOL+ with ALSRAC and Xiang’s method using
+IWLS circuits under ER constraint. Table V lists the area
+ratio and runtime for each circuit, averaged over two ER
+constraints, 1% and 2%. Bold entries highlight the cases
+where QUADOL+ outperforms both baselines. QUADOL+
+consistently outperforms Xiang’s method in both circuit area
+and runtime. On average, QUADOL+ generates approximate
+circuits with an area ratio of 73.1%, further improving
+Xiang’s method by 17.9% and ALSRAC by 2.3%. However,
+QUADOL+ is 1.5× slower than ALSRAC because it relies
+on the intermediate netlists generated by ALSRAC for further
+optimization. Hence, its runtime includes both the time for
+the best-performing ALSRAC trial and that of QUADOL to
+process the intermediate netlists.
+Note that in this experiment, QUADOL is excluded as it
+outperforms none of the baselines under the ER constraint. This
+is because QUADOL only considers HD during approximate
+LUT merging, ignoring the input probabilities of merged LUT
+pairs, which are important under the ER constraint. In contrast,
+QUADOL+ can further enhance the performance of other ALS
+methods, leading to improved results.
+TABLE V: Comparison of Xiang’s method [18], ALSRAC [17],
+and QUADOL+ under ER constraint.
+Circuit Average Area Ratio Average Runtime (s)
+[18] [17] QUADOL+ [18] [17] QUADOL+
+apex1 95.7% 85.3% 84.0% 1946 973 1459
+apex3 97.1% 90.4% 89.5% 2211 1106 1658
+apex4 97.6% 93.2% 92.8% 5396 2698 4047
+cps 55.5% 35.9% 34.9% 730 365 547
+dalu 85.1% 73.9% 72.6% 305 153 229
+des 96.0% 58.9% 57.5% 8124 4062 6093
+ex5p 90.1% 75.6% 69.8% 2098 1049 1574
+rd84 97.3% 70.2% 61.5% 115 58 86
+rot 97.1% 89.1% 88.0% 152 76 114
+seq 89.6% 79.2% 77.3% 5385 2693 4039
+table3 93.2% 69.1% 67.9% 917 459 688
+table5 92.3% 74.7% 72.7% 664 332 498
+vda 96.0% 84.6% 82.3% 449 225 337
+Arithmean 91.0% 75.4% 73.1% 2192 1096 1644
+2) Comparison under MRED constraint: We compare
+QUADOL and QUADOL+ with ALSRAC using EPFL circuits
+under MRED constraint. Xiang’s method is excluded as it
+does not support MRED. Table VI lists the area ratio and
+runtime, averaged across three MRED thresholds, 0.05%, 0.1%,
+and 0.5%. QUADOL often performs worse than ALSRAC, as
+ALSRAC works on AIG, which is more fine-grained than the
+LUT netlist that QUADOL works on, hence offering more opti-
+mization opportunity. In contrast, the combination of QUADOL
+and ALSRAC, i.e., QUADOL+, improves ALSRAC’s area ratio
+by 6.3% by utilizing dual-output LUTs, a feature not exploited
+by ALSRAC. Notably, for the div circuit, QUADOL+ reduces
+22.0% more area over ALSRAC. For the multiplier circuit,
+QUADOL+ shows less than 1% improvement, as ALSRAC
+has already reduced its area to 9.5% of the exact circuit.
+Nonetheless, QUADOL+ identifies and merges several LUT
+pairs within the error constraints, further decreasing the area.
+For the sqrt circuit, QUADOL+ shows no improvement over
+ALSRAC, for which ALSRAC already achieves a 96.8% area
+reduction. ALSRAC achieves such a large area reduction be-
+cause it aggressively simplifies the logic cones of the least
+significant output bits, which dominate the area in sqrt.
+In terms of delay, neither QUADOL nor QUADOL+ affects
+the delay of an FPGA design, as their key method, approximate
+LUT merging, only merges existing LUTs without affecting the
+length of each path in the design.
+B. Comparison with Prior Approximate Multipliers for FPGA
+In this section, we study the performance of QUADOL+ in
+synthesizing FPGA-based approximate multipliers. We use ap-
+proximate multipliers from EvoApproxLib [27], a widely-used

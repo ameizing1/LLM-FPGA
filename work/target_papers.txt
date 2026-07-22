@@ -1,0 +1,15 @@
+﻿D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\AddNet_Deep_Neural_Networks_Using_FPGA-Optimized_Multipliers - TVLSI20.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\An Efficient Softcore Multiplier Architecture for Xilinx FPGAs - ARITH15.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Deep Learning with Int8 Optimization on Xilinx Devices.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Hardware-Efficient_Multipliers_With_FPGA-Based_Approximation_for_Error-Resilient_Applications - TCASI24.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\High-Performance_Accurate_and_Approximate_Multipliers_for_FPGA-Based_Hardware_Accelerators - TCAD22.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Low-power approximate multipliers using encoded partial products and approximate compressors.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\More_AddNet_A_deeper_insight_into_DNNs_using_FPGA-optimized_multipliers - ISCAS23.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\QUADOL A Quality-Driven Approximate Logic Synthesis Method Leveraging Dual-Output LUTs for Modern FPGAs.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Small_Logic-based_Multipliers_with_Incomplete_Sub-Multipliers_for_FPGAs - ARITH24.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Towards_Globally_Optimal_Design_of_Multipliers_for_FPGAs - TC23.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\An FPGA accelerator for vision transformer with quantization and LUT-based operations-2026.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\AxCore A qantization-Aware Approximate GEMM Unit for LLM - Micro25.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\CXL-SpeckKV - FPGA26.pdf
+D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\FlightLLM Efficient LLM Inference with a Complete Mapping Flow on FPGAs - FPGA25.pdf
+D:\LiuZhiWei\Documents\xwechat_files\wxid_2oq495x45qlm12_1c59\msg\file\2026-06\2026 Adana Accelerating Large Language Models via Adaptive Nonuniform Asymmetric Quantization.pdf

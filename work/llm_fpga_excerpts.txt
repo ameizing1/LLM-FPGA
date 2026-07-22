@@ -1,0 +1,1511 @@
+
+========================================================================================================================
+An FPGA accelerator for vision transformer with quantization and LUT-based operations-2026.pdf
+pages: 8
+
+--- PAGE 1 ---
+IEICE TRANS. INF. & SYST., VOL.E109–D, NO.1 JANUARY 2026
+41
+PAPER Special Section on Forefront Computing
+An FPGA Accelerator for Vision Transformer with Quantization
+and LUT-Based Operations
+Cheng XUya), Yirong KANyb), Renyuan ZHANGyyc), Nonmembers, and Yasuhiko NAKASHIMAy, Fellow
+SUMMARY This paper proposes a Field-Programmable Gate Array
+(FPGA) accelerator for Vision Transformers (ViTs) with quantization and
+look-up-table (LUT) based operations. First, two improved quantization
+methods are proposed, achieving comparable performance at lower bit-
+widths. Furthermore, linear and nonlinear units’ designs are proposed to
+support diverse operations in ViTs models. Finally, the LUT-based acceler-
+ator design is implemented and evaluated. Experimental results on the Ima-
+geNet dataset demonstrate that our proposed quantization method achieves
+an accuracy of 80.74% at 2-bit width, outperforming state-of-the-art Vision
+Transformer quantization methods by 0.1% to 0.5%. The performance of
+the proposed FPGA accelerator demonstrates a higher energy eﬃciency,
+achieving a peak energy eﬃciency of 7.06 FPS/W and 246 GOPS/W.
+key words: vision transformer, FPGA, quantization, acceleration
+1. Introduction
+Over the past few years, the Transformer architecture has rev-
+olutionized the ﬁeld of natural language processing (NLP).
+Inspired by its success in NLP, Transformer-based models,
+such as Vision Transformers (ViTs), have demonstrated re-
+markable capabilities across various computer vision (CV)
+tasks, often surpassing state-of-the-art convolutional neural
+networks (CNNs) in performance [1]–[3]. These tasks in-
+clude image classiﬁcation [4], [5], object detection [4], [6],
+and image super-resolution [7].
+However, ViTs are characterized by their complex
+model structures, high computational demands, and sig-
+niﬁcant memory requirements, often involving hundreds of
+millions of parameters. For instance, the ViT-L model con-
+tains approximately 307 million parameters, resulting in high
+memory consumption and extended inference times. De-
+ploying such models on resource-constrained edge devices
+is a signiﬁcant challenge. Additionally, many real-time CV
+applications demand low latency, making eﬃcient deploy-
+ment even more critical. Consequently, model compression
+Manuscript received January 9, 2025.
+Manuscript revised April 22, 2025.
+Manuscript publicized June 24, 2025.
+yDivision of Information Science, Nara Institute of Science and
+Technology, Ikoma-shi, 630–0192 Japan.
+yySchool of Information Science and Engineering, Yunnan Uni-
+versity, Kunming, 650091, China.
+This paper was presented at the T welfth International Sympo-
+sium on Computing and Networking. This work was supported by
+JSPS KAKENHI Grant Numbers JP22H00515, JP22K21280, and
+JST-ALCA-Next Program Grant Number JPMJAN23F4, Japan.
+a) E-mail: cheng.xu.db8@naist.ac.jp
+b) E-mail: kan.yirong@is.naist.jp (Corresponding author)
+c) E-mail: rzhang@is.naist.jp (Corresponding author)
+DOI: 10.1587/transinf.2025PAP0003
+techniques tailored to Transformer-based architectures are
+essential for practical applications.
+Model quantization has been extensively studied as a
+technique for reducing the computational complexity to ac-
+celerate DNN inference on edge devices. Existing quantiza-
+tion methods can be broadly categorized into post-training
+quantization (PTQ), quantization-aware training (QAT) and
+binaray quantization.
+PTQ methods apply quantization to pre-trained models
+without additional training, making them computationally
+eﬃcient but often leading to accuracy degradation, especially
+for low-bit quantization. PTQ4ViT [8] proposed similarity-
+aware and ranking-aware quantization algorithms to ﬁnd the
+optimal quantization interval of the MLP and self-attention
+layers. TSPTQ-ViT [9] proposed two-scaled post-training
+quantization scheme to reduce the quantization loss and im-
+prove accuracy.
+In contrast, QAT methods [10], [11] incorporate quan-
+tization into the training process, allowing the model to
+adapt to quantization eﬀect and achieve better accuracy.
+FPQ4ViT [10] proposed a learning-based Quantization-
+aware Training approach. Auto-ViT-Acc [11] proposed
+mixed-scheme quantization algorithm to improve compu-
+tation eﬃciency and maintian accuracy.
+Recent studies have explored low-bit quantization tech-
+niques for ViTs, aiming to improve eﬃciency while main-
+taining model accuracy. Binary and ternary quantization
+methods [12], [13] have been proposed to further reduce
+model size and computational complexity. Full-binarized
+ViTs[14] replace full-precision weights and activations with
+binary values, enabling eﬃcient bitwise operations. How-
+ever, these extreme quantization approaches often lead to sig-
+niﬁcant accuracy degradation. Some studies [8], [11] have
+investigated mixed-precision quantization, allocating diﬀer-
+ent bit-widths to diﬀerent layers to balance eﬃciency and
+accuracy.
+While PTQ methods oﬀer a lightweight solution for
+quantization without requiring retraining, the
+
+--- PAGE 2 ---
+42
+IEICE TRANS. INF. & SYST., VOL.E109–D, NO.1 JANUARY 2026
+quirements.
+To address these challenges, this work proposes a
+hardware-aware quantization framework that builds upon
+QAT. Unlike conventional uniform quantization, our ap-
+proach considers the weight distribution across diﬀerent
+model layers that are often sparse and zero-centered and ap-
+plies ﬁner-granularity quantization to better preserve small-
+magnitude weights. This improves the trade-oﬀ between
+accuracy and hardware eﬃciency, enabling competitive per-
+formance under ultra-low-bit settings on FPGA platforms.
+The contributions of our work are summarized as fol-
+lows:
+• T wo quantization approaches are proposed to improve
+model inference accuracy and utilize FPGA LUT re-
+source eﬃciently.
+• A quantization-aware training algorithm is proposed to
+further enhance model performance.
+• FPGA-speciﬁc algorithms and hardware structures are
+designed for linear and non-linear layers in Vision
+Transformers.
+• An LUT-based vision transformer accelerator is imple-
+mented and optimized, oﬀering signiﬁcant improve-
+ments in accuracy and performance for resource-
+constrained edge devices.
+This article extends the authors’ previous work [15],
+which proposed FPGA-oriented quantization approaches for
+ViTs. This version brings updated related works (Sect. 1),
+explains detailed vision transformer literatures (Sect. 2), pro-
+poses design approaches for linear layers and nonlinear lay-
+ers of vision transformer (Sect. 3), and provides additional
+evaluations with FPGA-based acceleration works (Sect. 4).
+2. Preliminaries
+This section provides an overview of the Vision Transformer
+(ViT) architecture and various quantization schemes. A
+detailed analysis of the ViT model components, particu-
+larly the implementation of its nonlinear parts, is presented,
+highlighting their importance in model inference. Further-
+more, diﬀerent quantization techniques, including uniform
+and non-uniform quantization intervals, are explored. By
+comparing and analyzing these techniques, we reveal their
+potential impact on resource utilization and computational
+performance in FPGA implementations.
+2.1 Vision Transformer
+The Transformer model, initially designed for NLP tasks,
+revolutionized the ﬁeld by addressing the limitations of
+RNNs such as LSTMs and GRUs. Its encoder-decoder struc-
+ture and self-attention mechanisms enable parallel computa-
+tion, reducing training time and improving task performance,
+particularly in machine translation. As depicted in Fig. 1, the
+Vision Transformer (ViT) encoder comprisesL identical lay-
+ers, each containing two primary components: a multi-head
+Fig. 1 Vision Transformer structure.
+self-attention (MSA) mechanism and a multi-layer percep-
+tron (MLP). Layer normalization (LN) [16] is applied prior
+to each sub-layer, and residual connections merge outputs
+with the input to preserve information ﬂow.
+ViT enhances feature extraction by employing multi-
+head self-attention, where multiple attention heads process
+data simultaneously, and their results are concatenated to
+produce the ﬁnal output. The computational complexity of
+ViT arises primarily from extensive matrix multiplication
+operations in the MLP and MSA blocks, which dominate the
+overall workload. While quantization strategies typically
+target the linear layers to reduce computational demand, the
+nonlinear layers, such as softmax, layer normalization and
+GELU, which play a critical role in enhancing the model’s
+expressive power, often remain in full precision due to their
+lower cost and critical impact on model accuracy.
+The layer normalization function in Vision Transformer
+can be expressed as Eq. (1):
+LN ¹xi; jº = j  xi; j   i
+p
+2 + ϵ
++ j (1)
+Where i represents the mean of the inputs in the i-th
+row, 2
+i denotes the variance of the inputs in the i-th row, and
+ϵ is a very small constant added to avoid division by zero.
+Additionally, j and j represent the weight and bias for the
+j-th column, respectively.
+To avoid overﬂow and potential precision loss, the Soft-
+max function in Vision Transformers can be expressed as
+Eq. (2):
+So f tmax ¹xi; jº = exi ; j  xm a xi
+∑n
+j=1exi ; j  xma xi
+(2)
+Where xi; j represents the input data, and xmax i denotes
+the maximum value among the n inputs along the column
+dimension.
+The GELU function in Vision Transformers is approx-
+imated using Eq. (3):
+
+--- PAGE 3 ---
+XU et al.: AN FPGA ACCELERATOR FOR VISION TRANSFORMER WITH QUANTIZATION AND LUT-BASED OPERATIONS
+43
+GE LU¹xi;jº = xi;j
+2 
+(
+1+tanh
+(√
+2
+
+)(
+xi;j +0:044715x3
+i;j
+))
+(3)
+2.2 Quantization Schemes
+Uniform interval quantization encompasses binary, ternary,
+and ﬁxed-point approaches. Binary Neural Networks
+(BNNs) [12] and XNOR-Net [13] exemplify binary quan-
+tization, where restricting weights to (  1, +1) allows re-
+placing multiplications with additions/subtractions. Ternary
+quantization, by including zero, requires an additional bit
+for weight representation but similarly beneﬁts from non-
+multiplicative operations. While both binary and ternary
+quantization signiﬁcantly reduce computational complexity
+and simplify hardware accelerator implementations, they in-
+cur a noticeable accuracy penalty.
+In contrast, ﬁxed-point quantization employs moder-
+ate and adaptable bit-widths, enabling the maintenance of
+accuracy comparable to 32-bit ﬂoating-point models while
+improving eﬃciency.
+For m-bit ﬁxed-point quantization scheme [11], the
+quantized weights are deﬁned as shown in Eq. (4):
+QFP ¹m; º = 
+{
+0; 1
+2m 1   1; 2
+2m 1   1; : : : ;1
+}
+(4)
+The deﬁnition of the quantizer is given in Eq. (5), which
+maps the 32-bit ﬂoating-point weights ! to the quantized
+weights represented by m-bit ﬁxed-point values.
+b! = ∏
+QF P ¹!º =   round¹h¹⌈!; ⌋ºº (5)
+where ∏
+QF P ¹º denotes the quantizer function to project
+onto QF P¹m; ); the function h( ) transforms a value within
+[-1,+1]; and ⌈!; ⌋ clips ! by Eq. (6):
+⌈!; ⌋ =
+8>> <
+>>:
+ 1 ; ! <  
+! ;    !  
+1 ; ! > 
+(6)
+To balance hardware eﬃciency and model accuracy,
+researchers have explored non-uniform quantization tech-
+niques. Among these, Power-of-T wo (PoT)[17], [18] quan-
+tization signiﬁcantly reduces computational complexity by
+substituting multiplication with bit shifts, greatly reducing
+complexity, but at the cost of precision—even with higher
+bit-widths.
+The m-bit PoT quantized weight values are deﬁned as
+shown in Eq. (7):
+QPOT ¹m; º = 
+{
+0;  1
+22m 1 2 ;  1
+22m 1 3 ; : : : ;1
+}
+(7)
+Quantizing weights to the 2b(b 2 N) allows for the re-
+placement of multiplication operations between weights and
+activations with highly eﬃcient bit shifts, as shown in Eq. (8):
+2b  a =
+8>> <
+>>:
+a << b ; b > 0
+a ; b = 0
+a >> b ; b < 0
+(8)
+While power-of-two (PoT) quantization simpliﬁes hard-
+ware implementation by avoiding multiplications, its pre-
+cision gains are limited even with increasing quantization
+bit widths. Weights are commonly quantized using PoT,
+whereas activations typically employ ﬁxed-point quantiza-
+tion. Applying PoT quantization to activations leads to a
+signiﬁcant loss of precision.
+3. Proposed Method
+This section details the proposed quantization approach and
+design approach of accelerator.
+3.1 Quantization Schemes
+The proposed non-zero ﬁxed-point (NFQ) quantization re-
+duces computational cost and hardware area by eliminating
+zero values from the weight matrix, enabling shift-and-add
+operations instead of multipliers. This signiﬁcantly low-
+ers LUT usage, improves throughput, and better preserves
+small-magnitude weights, leading to higher model accuracy.
+In the NFQ scheme, quantized weight values, repre-
+sented using m bits, are deﬁned as Eq. (9):
+Q N F Q ¹m; º = 
+{
+ 1
+2m 1 ;  2
+2m 1 ; : : : ;1
+}
+(9)
+The mapping of a 32-bit ﬂoating-point weight ! to its
+m-bit NFQ quantized representation b! is performed by the
+following quantizer Eq. (10):
+b! = ∏
+Q N F Q ¹!º =   ¹h¹⌈!; ⌋ºº (10)
+where∏
+Q N F Q ¹º denotes the projection operator that maps a
+value onto the setQ N F Q¹m; º; the function h¹º is a clipping
+function that maps values into the range [ 1, +1]; and⌈!; ⌋
+represents a clipping operation on ! deﬁned as Eq. (11):
+⌈!; ⌋ =
+8>> <
+>>:
+Floor ¹!º ; ! < 0
+Ceil ¹1º ; ! = 0
+Ceil ¹! ; ! > 0
+(11)
+Figure 2 (b) illustrates the weight distribution of the ﬁrst
+row in the QKV linear layer of a Vision Transformer model’s
+ﬁrst layer after NFQ quantization, contrasting it with the
+original weight distribution shown in Fig. 2 (a). By elimi-
+nating zero values from weight matrices, NFQ quantization
+provides an optimization tailored for FPGA hardware char-
+acteristics, leading to improved computational eﬃciency.
+To optimize FPGA resource utilization, a scale power-
+of-2 (SP2) quantization scheme is proposed. While tra-
+ditional power-of-2 quantization uses shifts for multiplica-
+tion and addition, scaling factor multiplication still requires
+FPGA DSP resources. SP2 addresses this by also quantizing
+scaling factors to powers of 2, enabling shift operations for
+
+--- PAGE 8 ---
+48
+IEICE TRANS. INF. & SYST., VOL.E109–D, NO.1 JANUARY 2026
+Post-Training Quantization for Vision Transformer,” 2023 IEEE In-
+ternational Conference on Acoustics, Speech and Signal Processing
+(ICASSP), pp.1–5, 2023
+[10] Z. Li, P . Wang, Z. Wang, and J. Cheng, “Fixed-point Quantization
+for Vision Transformer,” 2021 China Automation Congress (CAC),
+pp.7282–7287, 2021
+[11] Z. Li, M. Sun, A. Lu, H. Ma, G. Yuan, Y . Xie, H. Tang, Y . Li,
+M.E. Leeser, Z. Wang, X. Lin, and Z. Fang, “Auto-vit-acc: An fpga-
+aware automatic acceleration framework for vision transformer with
+mixed-scheme quantization,” 2022 32nd International Conference
+on Field-Programmable Logic and Applications (FPL), pp.109–116,
+2022.
+[12] C. Lazarus and M.J. Kochenderfer, “A mixed integer programming
+approach for verifying properties of binarized neural networks,”
+ArXiv, vol.abs/2203.07078, 2022.
+[13] M. Mohaimenuzzaman, C. Bergmeir, and B. Meyer, “Pruning vs
+xnor-net: A comprehensive study of deep learning for audio classiﬁ-
+cation on edge-devices,” IEEE Access, vol.10, pp.6696–6707, 2022.
+[14] Y . Li, S. Xu, M. Lin, X. Cao, C. Liu, X. Sun, and B. Zhang, “Bi-
+ViT: Pushing the Limit of Vision Transformer Quantization,” AAAI
+Conference on Artiﬁcial Intelligence, vol.38, no.4, pp.3243–3251,
+2024.
+[15] C. Xu, Y . Kan, R. Zhang, and Y . Nakashima, “An FPGA-Oriented
+Quantization Approach for Vision Transformer with LUT-Friendly
+Operations,” 2024 T welfth International Symposium on Computing
+and Networking (CANDAR), Naha, Japan, 2024, pp.266–271. doi:
+10.1109/CANDAR64496.2024.00042.
+[16] R. Xiong, Y . Y ang, D. He, K. Zheng, S. Zheng, C. Xing, H. Zhang,
+Y . Lan, L. Wang, and T.- Y . Liu, “On layer normalization in the
+transformer architecture,” ArXiv, vol.abs/2002.04745, 2020.
+[17] P . Li, J. Cao, F. Li, H. Y ao, and Y . Wang, “Trainable power-of-
+2 scale factors for hardware-friendly network quantization,” 2022
+2nd International Conference on Computer, Control and Robotics
+(ICCCR), pp.151–155, 2022.
+[18] H.T. Tesfai, H.H. Saleh, M. Al-Qutayri, B. Mohammad, and T.
+Stouraitis, “Gradient estimation for ultra low precision pot and addi-
+tive pot quantization,” IEEE Access, vol.11, pp.61264–61272, 2023.
+[19] S.-E. Chang, Y . Li, M. Sun, R. Shi, H. K.-H. So, X. Qian, Y . Wang,
+and X. Lin, “Mix and match: A novel fpga-centric deep neural net-
+work quantization framework,” 2021 IEEE International Symposium
+on High-Performance Computer Architecture (HPCA), pp.208–220,
+2021.
+Cheng Xu received the B.S. degree in opti-
+cal information science and technology and M.S.
+degree in software engineering from Huazhong
+University of Science and Technology, Wuhan,
+China, in 1999 and 2003, respectively. He was
+a Lecturer with the School of Computer Sci-
+ence, Y angtze University, Jingzhou, China. He
+is currently a Ph.D. student at the Architecture
+Lab in Nara Institute of Science and Technology,
+Japan. His research interests include deep learn-
+ing, computer network, computer architecture.
+Yirong Kan received the B.E. degree
+from the Chengdu University of Technology,
+Chengdu, China, in 2015, the M.E. degree from
+Yunnan University, Kunming, China, in 2019,
+and the Ph.D. degree from the Nara Institute of
+Science and Technology, Ikoma, Japan, in 2022.
+He has been an Assistant Professor with the Di-
+vision of Information Science, Nara Institute of
+Science and Technology since 2022. His current
+research interests include reconﬁgurable com-
+puting, computer architecture, digital IC design,
+and emerging computing technologies.
+Renyuan Zhang received the BE degree
+from Tongji University, in 2007, the ME degree
+from Waseda University, in 2010, and the PhD
+degree from the University of Tokyo, in 2013. He
+was an assistant professor with Japan Advanced
+Institute of Science and Technology from 2013
+to 2017. He has been an Assistant Professor
+with Nara Institute of Science and Technology
+(NAIST) and the PRESTO researcher with Japan
+Science and Technology Agency since 2017 and
+2018, respectively. From 2024, he serves Yun-
+nan University as a Professor and NAIST as an Aﬃliated Professor. His
+research interests include analog–digital-mixed circuits, approximate com-
+puting, high performance computing, and hardware implementation of AI.
+Yasuhiko Nakashima received the B.E.,
+M.E., and Ph.D. degrees in computer engineer-
+ing from Kyoto University, in 1986, 1988, and
+1998, respectively. He was a Computer Archi-
+tect with the Computer and System Architecture
+Department, Fujitsu Ltd., from 1988 to 1999.
+From 1999 to 2005, he was an Associate Pro-
+fessor with the Graduate School of Economics,
+Kyoto University. Since 2006, he has been a Pro-
+fessor with the Graduate School of Information
+Science, Nara Institute of Science and Technol-
+ogy. His research interests include computer architecture, emulation, circuit
+design, and accelerators. He is a fellow of IEICE, a Senior Member of IPSJ,
+and a member of the IEEE CS and ACM.
+
+========================================================================================================================
+AxCore A qantization-Aware Approximate GEMM Unit for LLM - Micro25.pdf
+pages: 16
+
+--- PAGE 1 ---
+. 
+. 
+Latest updates: hps://dl.acm.org/doi/10.1145/3725843.3756094
+. 
+. 
+RESEARCH-ARTICLE
+AxCore: A antization-Aware Approximate GEMM Unit for LLM
+Inference
+JIAXIANG ZOU, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+YONGHAO CHEN, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+XINGYU CHEN, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+CHENXI XU, The Hong Kong University of Science and Technology (Guangzhou), Guangzhou,
+Guangdong, China
+. 
+XINYU CHEN, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+. 
+. 
+Open Access Support provided by:
+. 
+The Hong Kong University of Science and Technology (Guangzhou)
+. 
+PDF Download
+3725843.3756094.pdf
+30 December 2025
+Total Citations: 0
+Total Downloads: 3408
+. 
+. 
+. 
+. 
+Published: 18 October 2025
+. 
+. 
+Citation in BibTeX format
+. 
+. 
+MICRO 2025: 58th IEEE/ACM
+International Symposium on
+Microarchitecture
+October 18 - 22, 2025
+Seoul, Korea
+. 
+. 
+Conference Sponsors:
+SIGMICRO
+MICRO '25: Proceedings of the 58th IEEE/ACM International Symposium on Microarchitecture (October 2025)
+hps://doi.org/10.1145/3725843.3756094
+ISBN: 9798400715730
+.
+
+
+--- PAGE 2 ---
+AxCore: A Quantization-Aware Approximate GEMM Unit for LLM
+Inference
+Jiaxiang Zou∗
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+jiaxiangzou@std.uestc.edu.cn
+Yonghao Chen∗
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+ychen433@connect.hkust-gz.edu.cn
+Xingyu Chen
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+xchen740@connect.hkust-gz.edu.cn
+Chenxi Xu
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+cxu930@connect.hkust-gz.edu.cn
+Xinyu Chen†
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+xinyuchen@hkust-gz.edu.cn
+Abstract
+Large Language Models (LLMs) have become foundational to mod-
+ern natural language processing, yet their immense computational
+and memory demands pose major obstacles for efficient infer-
+ence. Transformer-based LLMs rely heavily on floating-point gen-
+eral matrix-matrix multiplication (FP-GEMM), which dominates
+both compute and bandwidth. In this paper, we introduce Ax-
+Core, a quantization-aware, approximate GEMM unit that combines
+weight-only quantization with floating-point multiplication approx-
+imation (FPMA) to deliver highly efficient and accurate LLM infer-
+ence. Unlike traditional GEMM units, AxCore eliminates multipliers
+entirely, replacing them with low-bit integer additions in a novel
+systolic array. AxCore features several key innovations: (1) a mixed-
+precision FPMA-based processing element that supports direct com-
+putation on compressed weights and high-precision activations;
+(2) a lightweight accuracy preservation strategy, including sub-
+normal number handling, error compensation, and format-aware
+quantization; and (3) a set of systolic array optimizations, including
+shared correction and normalization logic. Evaluations on open-
+source LLMs show that AxCore achieves up to 6.3×-12.5× higher
+compute density than conventional FP GEMM units. Compared
+to state-of-the-art INT4-based accelerators, FIGLUT and FIGNA,
+AxCore improves compute density by 53% and 70%, respectively,
+while also delivering lower perplexity. AxCore is opensourced at:
+https://github.com/CLab-HKUST-GZ/micro58-axcore.
+CCS Concepts
+• Computer systems organization→ Systolic arrays.
+∗Both authors contributed equally to this research.
+†Corresponding author.
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for components of this work owned by others than the
+author(s) must be honored. Abstracting with credit is permitted. To copy otherwise, or
+republish, to post on servers or to redistribute to lists, requires prior specific permission
+and/or a fee. Request permissions from permissions@acm.org.
+MICRO ’25, Seoul, Republic of Korea
+© 2025 Copyright held by the owner/author(s). Publication rights licensed to ACM.
+ACM ISBN 979-8-4007-1573-0/25/10
+https://doi.org/10.1145/3725843.3756094
+Keywords
+Large Language Model, Approximate Computing, Weight-only
+Quantization, Hardware Accelerator
+ACM Reference Format:
+Jiaxiang Zou, Yonghao Chen, Xingyu Chen, Chenxi Xu, and Xinyu Chen.
+2025. AxCore: A Quantization-Aware Approximate GEMM Unit for LLM
+Inference. In 58th IEEE/ACM International Symposium on Microarchitecture
+(MICRO ’25), October 18–22, 2025, Seoul, Republic of Korea. ACM, New York,
+NY, USA, 15 pages. https://doi.org/10.1145/3725843.3756094
+1 Introduction
+Large language models (LLMs) have revolutionized natural language
+processing tasks such as language understanding, translation, and
+generation [10, 42, 48, 53]. These models comprise multiple stacked
+transformer layers, containing billions to hundreds of billions of
+parameters, leading to substantial memory and computational de-
+mands. For instance, GPT-3, with 175 billion parameters, requires
+approximately 350GB of memory in FP16 representation [5], far
+exceeding the capacity of standard hardware accelerators like GPUs
+[7]. The core computational bottleneck in LLMs stems from the
+transformer architecture, where general matrix-matrix multiplica-
+tion (GEMM) operations dominate both arithmetic throughput and
+memory bandwidth. These GEMM kernels, typically implemented
+using floating-point arithmetic (e.g., FP16 or BF16), are hardware
+expensive, hindering efficient inference.
+Quantization has emerged as a key technique to address these
+challenges by representing high-precision floating-point values
+with lower-precision data types. In particular, weight-only quanti-
+zation, which compresses model weights into low-bit formats (e.g.,
+INT4 or FP4) while preserving higher precision activations (e.g.,
+FP16), has been widely adopted for LLM inference [12, 15, 26, 29,
+30, 45]. This approach is effective because model weights consume
+significantly more memory than activations, 
+
+--- PAGE 3 ---
+MICRO ’25, October 18–22, 2025, Seoul, Republic of Korea Jiaxiang Zou, Yonghao Chen, Xingyu Chen, Chenxi Xu, and Xinyu Chen
+/uni00000029/uni00000033/uni00000014/uni00000019/uni00000025/uni00000029/uni00000014/uni00000019
+/uni00000015
+/uni00000017
+/uni00000019/uni00000031/uni00000052/uni00000055/uni00000050/uni00000044/uni0000004f/uni0000004c/uni0000005d/uni00000048/uni00000047/uni00000003/uni00000037/uni00000032/uni00000033/uni00000036/uni00000012/uni00000050/uni00000050/uni00000015
+/uni00000014
+/uni00000017/uni00000011/uni00000013
+/uni00000019/uni00000011/uni0000001a
+/uni00000014
+/uni00000016/uni00000011/uni00000016
+/uni00000018/uni00000011/uni00000016
+/uni00000032/uni00000033/uni00000037/uni00000010/uni00000014/uni00000016/uni00000025/uni00000032/uni00000033/uni00000037/uni00000010/uni00000016/uni00000013/uni00000025/uni00000032/uni00000033/uni00000037/uni00000010/uni00000019/uni00000019/uni00000025/uni0000001c/uni00000011/uni00000018
+/uni00000014/uni00000013/uni00000011/uni00000013
+/uni00000014/uni00000013/uni00000011/uni00000018
+/uni00000014/uni00000014/uni00000011/uni00000013/uni00000033/uni00000048/uni00000055/uni00000053/uni0000004f/uni00000048/uni0000005b/uni0000004c/uni00000057/uni0000005c
+/uni00000014/uni00000013/uni00000011/uni00000017
+/uni00000014/uni00000013/uni00000011/uni00000018/uni00000018
+/uni00000014/uni00000013/uni00000011/uni00000017/uni00000015
+/uni0000001c/uni00000011/uni0000001b/uni00000015
+/uni0000001c/uni00000011/uni0000001c/uni00000018
+/uni0000001c/uni00000011/uni0000001a/uni0000001b
+/uni0000001c/uni00000011/uni00000019/uni0000001a
+/uni0000001c/uni00000011/uni0000001a/uni00000019
+/uni0000001c/uni00000011/uni00000019/uni0000001b
+/uni00000029/uni00000033/uni00000026/uni00000003/uni0000000b/uni00000029/uni00000033/uni00000017/uni0000000c/uni00000029/uni0000002c/uni0000002a/uni00000031/uni00000024/uni00000003/uni0000000b/uni0000002c/uni00000031/uni00000037/uni00000017/uni0000000c/uni00000024/uni0000005b/uni00000026/uni00000052/uni00000055/uni00000048/uni00000003/uni0000000b/uni00000029/uni00000033/uni00000017/uni0000000c
+(a) Compute density comparison (b) Accuracy comparison
+Figure 1: AxCore achieves significantly higher compute den-
+sity and comparable or better perplexity compared to conven-
+tional FP GEMM cores (FPC) and state-of-the-art INT4-based
+accelerator FIGNA [22].
+Meanwhile, floating-point multiplication approximation (FPMA)
+using integer addition has gained increasing attention for effi-
+cient model inference [24, 33, 36]. Mitchell’s logarithm approxima-
+tion [35] suggests that floating-point numbers can be interpreted
+within a logarithmic number system, while Gustafsson et al. [20]
+theoretically demonstrate that floating-point multiplication can be
+replaced with integer additions. This insight reveals that the costly
+floating-point multipliers in GEMM units can be substituted with
+simpler integer adders, offering significant resource savings for the
+intensive computations required by LLMs. While promising, exist-
+ing FPMA methods are limited to uniform-precision settings and
+suffer from accuracy loss when applied to deep LLMs, particularly
+under low-bit quantization, where subnormal values are frequent
+and error accumulation is non-trivial.
+In this paper, we proposeAxCore, a quantization-aware, approx-
+imate mpGEMM unit tailored for LLM inference. AxCore fuses low-
+bit quantization with FPMA to deliver highly efficient, multiplier-
+free mix-precision matrix multiplication, while preserving end-to-
+end model accuracy. It is built upon the following innovations:
+• Mixed-Precision FPMA Processing Elements (PEs) : AxCore
+extends FPMA to support direct mpGEMM between high-precision
+activations and low-bit quantized weights, which reduces dat-
+apath width and PE complexity. The design supports multiple
+floating-point formats concurrently, enabling flexible inference
+across diverse quantization configurations.
+• Lightweight Accuracy-Preserving Co-Design : To mitigate
+the approximation errors inherent in FPMA, AxCore introduces
+a lightweight software-hardware co-design featuring: (1) online
+subnormal number conversion for correctness in low-bit formats;
+(2) online constant-based error compensation; and (3) adaptive
+format-aware offline quantization.
+• Optimized Systolic Array Architecture : AxCore employs a
+highly efficient systolic array architecture that shares error cor-
+rection logic and result normalization logic across PEs to reduce
+hardware resource consumption.
+Extensive evaluations show that AxCore delivers superior hard-
+ware efficiency and accuracy. As shown in Figure 1, in the W4A16
+setting, AxCore achieves up to 6.7× higher compute density than
+conventional FP GEMM cores and 1.7× over INT4-based design,
+FIGNA [22]. Despite its approximate design, AxCore maintains com-
+petitive or even better perplexity compared to existing solutions.
+For instance, on the OPT-30B model, AxCore achieves a perplexity
+of 9.78, outperforming both FPC (9.82) and FIGNA (9.95). AxCore
+enable
+
+--- PAGE 16 ---
+AxCore: A Quantization-Aware Approximate GEMM Unit for LLM Inference MICRO ’25, October 18–22, 2025, Seoul, Republic of Korea
+• PyTorch 2.5.1
+• Conda 25.1.1
+• GCC 11.4.0
+• CUDA 12.4
+• Cacti 7.0
+A.3.4 Data sets. We evaluate perplexity on the WikiText-2 dataset.
+For zero-shot evaluations, we employ a suite of benchmarks, in-
+cluding ARC-e, HellaSwag, PiQA, and Winogrande. Additionally,
+the Pile dataset is used during the calibration of AxCore to mitigate
+overfitting.
+A.3.5 Models. We evaluate a suite of foundation models from the
+Hugging Face Hub. For perplexity measurements, we use OPT-2.7B,
+OPT-6.7B, OPT-13B, OPT-30B, LLaMA2-7B, and LLaMA2-70B. For
+the zero-shot performance evaluation, we then focus on the two
+largest models: OPT-30B and LLaMA2-70B.
+A.4 Installation
+We have well-documented README files to detail the installa-
+tion instruction for each experiment at https://github.com/CLab-
+HKUST-GZ/micro58-axcore.
+A.5 Experiment workflow
+The artifact evaluation is split into three main parts, each designed
+to reproduce a specific set of results from the paper.
+1. Functional verification of AxCore hardware:
+(1) Please follow the detailed instructions provided in the file
+Hardware/AxCore/README.md.
+2. Evaluation of LLM accuracy (reproduces Table 2 and
+Table 3):
+(1) Create the Environment: Set up the Conda environment
+by following the instructions at https://github.com/CLab-
+HKUST-GZ/micro58-axcore/tree/main/Software/AxCore.
+(2) Execute evaluation: Run the corresponding shell script
+for each table. The script will automatically download the
+required models and datasets from the Hugging Face Hub
+(if not cached) and then perform the AxCore evaluation.
+3. Performance of the AxCore simulator (reproduces Fig-
+ure 17):
+(1) Create the Environment: Set up the Conda environment as
+instructed at https://github.com/CLab-HKUST-GZ/micro58-
+axcore/tree/main/Software/axcore_simulator.
+(2) Run Simulator and plot results: Execute the provided
+script to run all simulations. The final plot will be generated
+as results/fig_17.pdf.
+4. Gemm operations percentage (reproduces Figure 2) (op-
+tional):
+(1) Calculate Workload Distribution:Run the profiling script
+to analyze the computational workload.
+(2) Generate Visualization: Create the visualization chart.
+This generates figure2.pdf in the current directory.
+A.6 Evaluation and expected results
+Our experiments have three major parts: the evaluation of AxCore
+hardware design, the evaluation of LLM accuracy and the perfor-
+mance of the AxCore simulator.
+• Hardware/AxCore: Contains all components for hardware
+design and functional verification.
+• Software/AxCore: Contains the PyTorch-based framework
+for LLM accuracy evaluation.
+• Software/axcore_simulator: Contains the cycle-accurate
+simulator for performance and energy evaluation.
+• Profile: Contains the gemm operations percentage of OPT
+and LLaMA models across various sequence lengths.
+To run these experiments, please consult theREADME.md file in each
+directory for detailed guidance. For verification, we have included
+the expected results for Table 2, Table 3, Figure 2 and Figure 17
+within these README files.
+A.7 Methodology
+Submission, reviewing and badging methodology:
+• https://www.acm.org/publications/policies/artifact-review-and-
+badging-current
+• https://cTuning.org/ae
+853
+
+========================================================================================================================
+CXL-SpeckKV - FPGA26.pdf
+pages: 11
+
+--- PAGE 1 ---
+CXL-SpecKV: A Disaggregated FPGA Speculative KV-Cache for
+Datacenter LLM Serving
+Dong Liu
+Yale University
+New Haven, Connecticut, USA
+dong.liu.dl2367@yale.edu
+Yanxuan Yu
+Columbia University
+New York, New York, USA
+yy3523@columbia.edu
+Abstract
+Large Language Models (LLMs) have revolutionized natural lan-
+guage processing tasks, but their deployment in datacenter envi-
+ronments faces significant challenges due to the massive memory
+requirements of key-value (KV) caches. During the autoregressive
+decoding process, KV caches consume substantial GPU memory,
+limiting batch sizes and overall system throughput. To address
+these challenges, we proposeCXL-SpecKV, a novel disaggregated
+KV-cache architecture that leverages Compute Express Link (CXL)
+interconnects and FPGA accelerators to enable efficient speculative
+execution and memory disaggregation. Our approach introduces
+three key innovations: (i) a CXL-based memory disaggregation
+framework that offloads KV-caches to remote FPGA memory with
+low latency, (ii) a speculative KV-cache prefetching mechanism that
+predicts and preloads future tokens’ cache entries, and (iii) an FPGA-
+accelerated KV-cache compression and decompression engine that
+reduces memory bandwidth requirements by up to 4×. When eval-
+uated on state-of-the-art LLM models, CXL-SpecKV achieves up
+to 3.2× higher throughput compared to GPU-only baselines, while
+reducing memory costs by 2.8× and maintaining accuracy. Our sys-
+tem demonstrates that intelligent memory disaggregation combined
+with speculative execution can effectively address the memory wall
+challenge in large-scale LLM serving. Our code implementation has
+been open-sourced at https://github.com/FastLM/CXL-SpecKV.
+CCS Concepts
+•Hardware;•Computer systems organization → Architec-
+tures;•Networks;
+Keywords
+CXL, FPGA, LLM, KV-cache, memory disaggregation, speculative
+execution, deep learning
+ACM Reference Format:
+Dong Liu and Yanxuan Yu. 2026. CXL-SpecKV: A Disaggregated FPGA
+Speculative KV-Cache for Datacenter LLM Serving. InProceedings of the
+2026 ACM/SIGDA International Symposium on Field Programmable Gate
+Arrays (FPGA ’26), February 22–24, 2026, Seaside, CA, USA.ACM, New York,
+NY, USA, 11 pages. https://doi.org/10.1145/3748173.3779188
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+FPGA ’26, Seaside, CA, USA
+©2026 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-2079-6/2026/02
+https://doi.org/10.1145/3748173.3779188
+1 Introduction
+Large Language Models (LLMs) have emerged as the cornerstone
+of modern AI applications [7, 33, 46]. However, serving them effi-
+ciently faces significant challenges due to massive memory require-
+ments of key-value (KV) caches. During inference, transformer-
+based LLMs store intermediate key and value tensors from all previ-
+ous tokens. For a typical LLaMA-2 70B model serving 2048 tokens
+with batch size 32, the KV-cache alone consumes 640GB—far ex-
+ceeding GPU capacity [19].
+Traditional approaches include memory offloading [ 41], KV-
+cache compression [ 16], and speculative decoding [ 20], but suf-
+fer from limited bandwidth, accuracy degradation, or persistent
+memory constraints.
+Recent advances in Compute Express Link (CXL) [11] and FPGA
+architectures [12] present new opportunities. CXL provides high-
+bandwidth, low-latency cache-coherent memory sharing, while
+FPGAs offer customizable acceleration.
+We proposeCXL-SpecKV, combining CXL memory disaggre-
+gation with FPGA-accelerated speculative execution. By predicting
+and preloading KV-cache entries through CXL, we overcome GPU
+memory limits while maintaining low latency.
+CXL-SpecKV features: (i) transparent KV-cache offloading to
+CXL memory (4-8×capacity expansion), (ii) speculative prefetching
+with 95% accuracy reducing access latency, (iii) FPGA-accelerated
+compression (3-4×ratio) and address translation, and (iv) seamless
+integration with existing frameworks.
+The architecture consists of three components: the CXL Memory
+Manager for allocation and migration, the Speculative Prefetcher us-
+ing lightweight models for prediction, and the FPGA Cache Engine
+implementing compression/decompression pipelines at >800MHz.
+Our evaluations on LLM workloads (7B-70B parameters) show:
+3.2×higher throughput enabling 4-8×larger batches, 8% per-token
+latency overhead, 2.8×memory cost reduction, 99.5% accuracy
+preservation, and 87% parallel efficiency at 8 GPUs. The approach
+potentially reduces infrastructure costs by 30-40% for memory-
+bound workloads.
+The contributions of this work are summarized as follows:
+• We propose the first CXL-based disaggregated memory archi-
+tecture specifically designed for LLM KV-cache management,
+demonstrating the viability and benefits of memory pooling
+for inference workloads.
+• We introduce novel speculative prefetching algorithms that
+exploit the predictable patterns in autoregressive token gen-
+eration, achieving high prediction accuracy while maintain-
+ing low computational overhead.
+• We design
+
+--- PAGE 2 ---
+FPGA ’26, February 22–24, 2026, Seaside, CA, USA Dong Liu and Yanxuan Yu
+detailed architectural descriptions and resource utilization
+analysis.
+• We develop a complete system prototype integrated with
+popular LLM serving frameworks (vLLM, TensorRT-LLM),
+demonstrating practical deployment feasibility and real-world
+performance benefits.
+• We conduct extensive evaluations across multiple LLM mod-
+els and workload patterns, providing insights into the per-
+formance characteristics, bottlenecks, and optimization op-
+portunities of disaggregated memory architectures for LLM
+serving.
+The remainder of this paper is organized as follows. Section 2
+reviews related work in LLM serving optimization, memory disag-
+gregation, and FPGA acceleration. Section 3 presents the detailed
+architecture of CXL-SpecKV, including the memory management
+framework, speculative prefetching mechanisms, and FPGA cache
+engine design. Section 4 describes our experimental methodology
+and presents comprehensive performance evaluations. Finally, Sec-
+tion 5 concludes with a discussion of future research directions and
+broader implications for datacenter AI infrastructure.
+2 Related Work
+Our work builds upon and extends research in several key areas:
+LLM serving optimization, memory disaggregation technologies,
+FPGA-based acceleration, and speculative execution techniques.
+We discuss the most relevant prior work and highlight how CXL-
+SpecKV differs from and improves upon existing approaches.
+2.1 LLM Serving and KV-Cache Optimization
+The challenge of efficiently serving large language models has
+received significant attention from both industry and academia.
+vLLM [19] introduces PagedAttention, which organizes KV-caches
+in paged memory blocks to reduce fragmentation and improve
+memory utilization. However, vLLM is fundamentally limited by
+GPU memory capacity and does not address the bandwidth bottle-
+necks of memory disaggregation. FlexGen [41] explores offloading
+strategies between GPU, CPU, and disk storage, but suffers from
+the high latency of PCIe transfers (typically 8-12GB/s) compared to
+GPU HBM bandwidth (>2TB/s). Our CXL-based approach achieves
+significantly lower latency and higher bandwidth than PCIe-based
+offloading.
+DeepSpeed-Inference [4] and FasterTransformer [32] provide
+optimized inference kernels and tensor parallelism strategies, but do
+not fundamentally address memory capacity constraints. Orca [50]
+introduces iteration-level scheduling to maximize batch size and
+throughput, yet remains constrained by available GPU memory.
+TinyServe [26] proposes query-aware cache selection strategies for
+efficient LLM serving, optimizing cache utilization based on query
+characteristics. In contrast, CXL-SpecKV effectively expands the
+memory capacity available for KV-caching by 4-8×, enabling larger
+batch sizes than any GPU-only approach.
+Long-context optimization techniques typically improve atten-
+tion efficiency through algorithmic sparsification or representation
+compression. Methods such as GQA [3], MKA [28],𝜋-Attention [25],
+and MLA [23] reduce memory consumption per token but do not ad-
+dress hardware-level constraints in memory capacity or bandwidth.
+CXL-SpecKV improves long-context processing from another per-
+spective by enabling disaggregated memory expansion.
+Recent work on KV-cache compression includes quantization-
+based methods [16, 29] that reduce precision from FP16 to INT8
+or INT4, achieving 2-4×compression at the cost of some accu-
+racy degradation. LLMEasyQuant [ 24] proposes scalable quanti-
+zation techniques for parallel and distributed LLM inference, ad-
+dressing quantization challenges in multi-GPU settings. H2O [52]
+proposes evicting less important KV-cache entries based on at-
+tention scores, while StreamingLLM [48] maintains only a sliding
+window of recent tokens. These techniques are complementary to
+our approach—CXL-SpecKV can leverage compression algorithms
+while additionally providing memory capacity expansion through
+disaggregation. Moreover, our FPGA-based compression engine
+can perform these operations without consuming GPU compute
+resources.
+2.2 Memory Disaggregation and CXL
+Memory disaggregation has been extensively studied in the con-
+text of datacenter resource management [ 1, 22, 40]. Traditional
+approaches use RDMA over InfiniBand or Ethernet, achieving laten-
+cies of 1-5𝜇s but requiring complex software stacks. CXL [11] rep-
+resents a paradigm shift by providing cache-coherent, low-latency
+(sub-microsecond) memory access through a standardized PCIe-
+based protocol.
+Recent work has begun exploring CXL for various applications.
+TPP [13] demonstrates CXL memory pooling for database work-
+loads, while Pond [39] proposes CXL-based memory expansion for
+containerized applications. However, these works focus on general-
+purpose memory disaggregation and do not address the specific
+challenges of LLM serving, such as the need for speculative prefetch-
+ing and the unique access patterns of KV-caches. To the best 
+
+--- PAGE 3 ---
+CXL-SpecKV: A Disaggregated FPGA Speculative KV-Cache for Datacenter LLM Serving FPGA ’26, February 22–24, 2026, Seaside, CA, USA
+sparse matrix operations. While our work does not directly lever-
+age structured sparsity (KV-caches are typically dense), we adopt
+similar design principles for building efficient systolic arrays in our
+FPGA cache engine. Additionally, we benefit from the advances in
+FPGA DSP blocks and high-bandwidth memory interfaces described
+in [43].
+Prior work on FPGA-based memory controllers includes spe-
+cialized designs for DRAM scheduling [ 6] and NVM access [ 42].
+However, these works do not address the specific requirements
+of LLM KV-cache management, such as the need for compres-
+sion/decompression, speculative prefetching, and integration with
+CXL protocols. Our FPGA cache engine implements a complete
+pipeline optimized for transformer KV-cache patterns.
+2.4 Speculative Execution for LLMs
+Speculative decoding has emerged as a promising technique to
+accelerate LLM inference. Leviathan et al. [ 20] propose using a
+smaller draft model to generate candidate tokens that are verified
+by the target model in parallel. Medusa [8] extends this approach
+with multiple decoding heads to predict multiple tokens simultane-
+ously. SpecInfer [30] introduces a speculative inference system that
+adaptively selects draft models based on workload characteristics.
+CSV-Decode [27] introduces certifiable sub-vocabulary decoding to
+improve inference efficiency through optimized token generation.
+While these techniques improve computational efficiency, they
+do not address memory constraints—in fact, speculative decoding
+often increases memory pressure by maintaining multiple KV-cache
+versions for candidate sequences. CXL-SpecKV takes a different
+approach: instead of speculating on token values, we speculate on
+which KV-cache entries will be needed next and prefetch them
+from disaggregated memory. This is complementary to algorithmic
+speculative decoding and can be combined with such techniques
+for further performance improvements.
+Prefetching strategies for neural network inference have been
+explored in [ 15, 34], but primarily focus on weight prefetching
+for CNN inference. The autoregressive nature of LLM decoding
+presents unique challenges: access patterns depend on generated
+content and are thus data-dependent. Our speculative prefetcher
+uses lightweight sequence models trained on token generation
+traces to predict future cache accesses with high accuracy.
+CXL-SpecKV is the first to combine CXL memory disaggregation,
+FPGA-accelerated compression, and speculative prefetching for
+LLM serving, achieving 3.2×throughput and 2.8×memory cost
+reduction with 95% prefetch accuracy.
+3 Architecture & Design Overview
+In this section, we present the detailed architecture of CXL-SpecKV,
+a disaggregated KV-cache system that leverages CXL interconnects
+and FPGA accelerators to enable efficient large-scale LLM serving.
+We begin with an overview of KV-cache characteristics and memory
+access patterns in Section 3.1, followed by the system architecture
+in Section 3.2. We then describe the CXL memory management
+framework in Section 3.3, the speculative prefetching mechanism
+in Section 3.4, and the FPGA cache engine design in Section 3.5.
+Finally, we discuss system integration and optimization strategies
+in Section 3.6.
+3.1 KV-Cache Analysis and Memory Access
+Patterns
+For transformer with𝐿 layers, hidden dimension𝑑ℎ, and𝐻 attention
+heads, each token generates KV tensors(𝐻,𝑑ℎ/𝐻) per layer. Total
+memory requirement for batch𝐵 with max sequence𝑆𝑚𝑎𝑥 is𝑀𝐾𝑉 =
+2·𝐿·𝐵·𝑆 𝑚𝑎𝑥·𝑑ℎ·𝑃𝑏𝑖𝑡𝑠 where𝑃𝑏𝑖𝑡𝑠 is precision. For LLaMA-2 70B
+(𝐿= 80,𝑑ℎ = 8192,𝐵= 32,𝑆𝑚𝑎𝑥 = 2048, FP16), this yields 640GB,
+exceeding A100’s 80GB capacity.
+Profiling reveals key characteristics exploitable by CXL-SpecKV:
+(i)sequential temporal localitywith token 𝑡 accessing positions
+[0,𝑡− 1] enabling predictive prefetching, (ii)layer-wise independence
+allowing pipelined per-layer processing, (iii)read-heavy workload
+with read/write ratioR𝑟/𝑤≈𝑆 : 1favoring caching, (iv)value clus-
+teringnear zero enabling INT8 quantization with > 99%accuracy
+andR𝑐 = 2×, (v)spatial correlationin attention heads exploitable
+via delta encoding𝛿𝑖 =𝑥 𝑖−𝑥𝑖−1 , and (vi)layer-specific compress-
+ibilitywith early layers achieving R𝑐(ℓ<𝐿/ 3)∈[ 3, 4] and late
+layersR𝑐(ℓ> 2𝐿/3)∈[ 2.5, 3]. These inform CXL-SpecKV’s specu-
+lative prefetching, pipelined compression, and adaptive layer-wise
+algorithm selection.
+3.2 System Architecture Overview
+The CXL-SpecKV system comprises four main components:
+GPU Inference Engine:The GPU hosts the transformer model
+weights and executes the forward pass for token generation. It
+maintains a small local KV-cache for recently accessed entries (typ-
+ically the most recent 128-256 tokens) to maximize cache hit rates
+for hot data.
+CXL Memory Pool:Large-capacity FPGA-attached memory
+(64-256GB per device) connected via CXL 2.0 interface provides
+the main KV-cache storage. This memory
+
+--- PAGE 11 ---
+CXL-SpecKV: A Disaggregated FPGA Speculative KV-Cache for Datacenter LLM Serving FPGA ’26, February 22–24, 2026, Seaside, CA, USA
+information processing systems33 (2020), 1877–1901.
+[8] Tianle Cai, Yuhong Li, Zhengyang Geng, Hongwu Peng, Jason D Lee, Deming
+Chen, and Tri Dao. 2024. Medusa: Simple llm inference acceleration framework
+with multiple decoding heads.arXiv preprint arXiv:2401.10774(2024).
+[9] Mark Chen, Jerry Tworek, Heewoo Jun, Qiming Yuan, Henrique Ponde de Oliveira
+Pinto, Jared Kaplan, Harri Edwards, Yuri Burda, Nicholas Joseph, Greg Brockman,
+et al. 2021. Evaluating large language models trained on code.arXiv preprint
+arXiv:2107.03374(2021).
+[10] ShareGPT Community. 2023. ShareGPT: Share your wildest ChatGPT conversa-
+tions. https://sharegpt.com.
+[11] CXL Consortium. 2022. Compute Express Link Specification Revision 2.0.
+[12] Intel Corporation. 2024. Intel Agilex 7 FPGA Architecture. (2024).
+[13] Donghyun Gouk, Sangwon Lee, Miryeong Kwon, and Myoungsoo Shin. 2023.
+Direct access, high-performance memory disaggregation with directcxl. In2023
+USENIX Annual Technical Conference (USENIX ATC 23). 287–294.
+[14] Tae Jun Ham, Yejin Lee, et al . 2020. FPGA-based hardware acceleration of
+transformer attention modules. InProceedings of the International Conference for
+High Performance Computing, Networking, Storage and Analysis. 1–14.
+[15] Milad Hashemi, Kevin Swersky, Jamie A Smith, Grant Ayers, Heiner Litz, Jichuan
+Chang, Christos Kozyrakis, and Parthasarathy Ranganathan. 2018. Learning
+memory access patterns. InInternational Conference on Machine Learning. 1919–
+1928.
+[16] Coleman Hooper, Sehoon Kim, Hiva Mohammadzadeh, Michael W Mahoney,
+Yakun Sophia Shao, Kurt Keutzer, and Amir Gholami. 2024. Kvquant: Towards 10
+million context length llm inference with kv cache quantization.arXiv preprint
+arXiv:2401.18079(2024).
+[17] Junhyeok Jang, Hanjin Park, Jinsoo Choi, Jaehoon Lee, Suhwan Lee, et al. 2023.
+CXL-ANNS: Software-Hardware Collaborative Memory Disaggregation and Com-
+putation for Billion-Scale Approximate Nearest Neighbor Search.arXiv preprint
+arXiv:2305.15838(2023).
+[18] Albert Q Jiang, Alexandre Sablayrolles, Arthur Mensch, Chris Bamford, De-
+vendra Singh Chaplot, Diego de las Casas, Florian Bressand, Gianna Lengyel,
+Guillaume Lample, et al. 2023. Mistral 7B.arXiv preprint arXiv:2310.06825(2023).
+[19] Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying Sheng, Lianmin Zheng,
+Cody Hao Yu, Joseph E Gonzalez, Hao Zhang, and Ion Stoica. 2023. Efficient
+memory management for large language model serving with pagedattention. In
+Proceedings of the ACM SIGOPS 29th Symposium on Operating Systems Principles.
+[20] Yaniv Leviathan, Matan Kalman, and Yossi Matias. 2023. Fast inference from
+transformers via speculative decoding.arXiv preprint arXiv:2211.17192(2023).
+[21] Zhe Li, Yuxuan Yang, Yiqi Xing, Zhipeng Zhang, Qingyang Wang, et al . 2024.
+CXL-MEM: Enabling Cost-Effective and Performant Memory Expansion for Deep
+Learning.arXiv preprint arXiv:2401.13841(2024).
+[22] Kevin Lim, Jichuan Chang, Trevor Mudge, Parthasarathy Ranganathan, Steven K
+Reinhardt, and Thomas F Wenisch. 2009. Disaggregated memory for expansion
+and sharing in blade servers.ACM SIGARCH Computer Architecture News37, 3
+(2009), 267–278.
+[23] Aixin Liu, Bei Feng, Bin Wang, Bingxuan Wang, Bo Liu, Chenggang Zhao,
+Chengqi Dengr, Chong Ruan, Damai Dai, Daya Guo, et al . 2024. Deepseek-
+v2: A strong, economical, and efficient mixture-of-experts language model.arXiv
+preprint arXiv:2405.04434(2024).
+[24] Dong Liu and Yanxuan Yu. 2025. LLMEasyQuant: Scalable Quantization for
+Parallel and Distributed LLM Inference. (2025). arXiv:2406.19657 [cs.LG] https:
+//arxiv.org/abs/2406.19657
+[25] Dong Liu and Yanxuan Yu. 2025. 𝜋-Attention: Periodic Sparse Transformers
+for Efficient Long-Context Modeling. (2025). arXiv:2511.10696 [cs.CL] https:
+//arxiv.org/abs/2511.10696
+[26] Dong Liu and Yanxuan Yu. 2025. TinyServe: Query-Aware Cache Selection for
+Efficient LLM Serving. InProceedings of the 33rd ACM International Conference
+on Multimedia. 12529–12537.
+[27] Dong Liu, Yanxuan Yu, and Ben Lengerich. 2025. CSV-Decode: Certifiable Sub-
+Vocabulary Decoding for Efficient Large Language Model Inference.arXiv preprint
+arXiv:2511.21702(2025).
+[28] Dong Liu, Yanxuan Yu, Xuhong Wang, Ben Lengerich, and Ying Nian Wu. [n. d.].
+MKA: Memory-Keyed Attention for Efficient Long-Context Reasoning. InICML
+2025 Workshop on Long-Context Foundation Models.
+[29] Zirui Liu, Jiayi Yuan, Hongye Jin, Shaochen Zhong, Zhaozhuo Xu, Vladimir
+Braverman, Beidi Chen, and Xia Hu. 2024. Kivi: A tuning-free asymmetric 2bit
+quantization for kv cache.arXiv preprint arXiv:2402.02750(2024).
+[30] Xupeng Miao, Gabriele Oliaro, Zhihao Zhang, Xinhao Cheng, Zeyu Wang,
+Zhengxin Wong, Yaohui Zhu, and Zhihao Jia. 2024. Specinfer: Accelerating
+generative llm serving with speculative inference and token tree verification.
+arXiv preprint arXiv:2305.09781(2024).
+[31] Ramesh Nallapati, Bowen Zhou, Caglar Gulcehre, Bing Xiang,
+
+========================================================================================================================
+FlightLLM Efficient LLM Inference with a Complete Mapping Flow on FPGAs - FPGA25.pdf
+pages: 12
+
+--- PAGE 1 ---
+FlightLLM: Efficient Large Language Model Inference
+with a Complete Mapping Flow on FPGAs
+Shulin Zeng∗
+Tsinghua University
+Infinigence-AI
+Jun Liu∗
+Shanghai Jiao Tong University
+Infinigence-AI
+Guohao Dai†
+Shanghai Jiao Tong University
+Infinigence-AI
+Xinhao Yang
+Tsinghua University
+Infinigence-AI
+Tianyu Fu
+Tsinghua University
+Infinigence-AI
+Hongyi Wang
+Tsinghua University
+Infinigence-AI
+Wenheng Ma
+Tsinghua University
+Hanbo Sun
+Tsinghua University
+Shiyao Li
+Tsinghua University
+Infinigence-AI
+Zixiao Huang
+Tsinghua University
+Yadong Dai
+Infinigence-AI
+Jintao Li
+Infinigence-AI
+Zehao Wang
+Infinigence-AI
+Ruoyu Zhang
+Infinigence-AI
+Kairui Wen
+Infinigence-AI
+Xuefei Ning
+Tsinghua University
+Yu Wang†
+Tsinghua University
+ABSTRACT
+Transformer-based Large Language Models (LLMs) have made
+a significant impact on various domains. However, LLMs’ effi-
+ciency suffers from both heavy computation and memory over-
+heads. Compression techniques like sparsification and quantization
+are commonly used to mitigate the gap between LLM’s computa-
+tion/memory overheads and hardware capacity. However, existing
+GPU and transformer-based accelerators cannot efficiently process
+compressed LLMs, due to the following unresolved challenges: low
+computational efficiency, underutilized memory bandwidth, and
+large compilation overheads.
+This paper proposes FlightLLM, enabling efficient LLMs infer-
+ence with a complete mapping flow on FPGAs. In FlightLLM, we
+highlight an innovative solution that the computation and mem-
+ory overhead of LLMs can be solved by utilizing FPGA-specific
+resources (e.g., DSP48 and heterogeneous memory hierarchy). We
+propose a configurable sparse DSP chain to support different spar-
+sity patterns with high computation efficiency. Second, we propose
+an always-on-chip decode scheme to boost memory bandwidth
+with mixed-precision support. Finally, to make FlightLLM available
+for real-world LLMs, we propose a length adaptive compilation
+∗Both authors contributed equally to this research.
+†Corresponding authors. Email: daiguohao@sjtu.edu.cn, yu-wang@tsinghua.edu.cn
+This work is licensed under a Creative Commons Attribution
+International 4.0 License.
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA
+© 2024 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-0418-5/24/03
+https://doi.org/10.1145/3626202.3637562
+method to reduce the compilation overhead. Implemented on the
+Xilinx Alveo U280 FPGA, FlightLLM achieves 6.0× higher energy
+efficiency and 1.8× better cost efficiency against commercial GPUs
+(e.g., NVIDIA V100S) on modern LLMs (e.g., LLaMA2-7B) using
+vLLM and SmoothQuant under the batch size of one. FlightLLM
+beats NVIDIA A100 GPU with 1.2× higher throughput using the
+latest Versal VHK158 FPGA.
+CCS CONCEPTS
+• Hardware→ Hardware accelerators; • Computer systems
+organization→ Reconfigurable computing.
+KEYWORDS
+Large Language Model, FPGA, Complete Mapping Flow
+ACM Reference Format:
+Shulin Zeng, Jun Liu, Guohao Dai, Xinhao Yang, Tianyu Fu, Hongyi Wang,
+Wenheng Ma, Hanbo Sun, Shiyao Li, Zixiao Huang, Yadong Dai, Jintao
+Li, Zehao Wang, Ruoyu Zhang, Kairui Wen, Xuefei Ning, and Yu Wang.
+2024. FlightLLM: Efficient Large Language Model Inference with a Com-
+plete Mapping Flow on FPGAs. In Proceedings of the 2024 ACM/SIGDA
+International Symposium on Field Programmable Gate Arrays (FPGA ’24),
+March 3–5, 2024, Monterey, CA, USA. ACM, New York, NY, USA, 12 pages.
+https://doi.org/10.1145/3626202.3637562
+1 INTRODUCTION
+Recently, we have witnessed the rapid development and significant
+impact of Large Language Models (LLMs) [5, 48]. LLMs demonstrate
+amazing power to understand all the users’ input requests (prefill
+stage) and generate accurate responses token-by-token (decode
+
+
+--- PAGE 2 ---
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA Shulin Zeng et al.
+Large
+Language Model
+FPGA
+GPU
+FlightLLM
+Deploy with opt.
+(vLLM, INT8, …)
+Cost
+Price
+(~$12K)
+Power
+(~220W)
+Cost
+Price
+(~$8K)
+Power
+(~45W)
+V100
+(12 nm)
+U280
+(16 nm)
+Performance
+Performance
+~45
+token/s
+~55
+token/s
+1x throughput/price
+1x throughput/power
+1.8x throughput/price
+6.0x throughput/power
+Figure 1: FlightLLM on Alveo U280 FPGA outperforms
+NVIDIA V100S GPU (using vLLM [31] and SmoothQuant [49])
+with better performance and cost efficiency.
+stage). LLMs are being widely used in latency-sensitive scenar-
+ios [36], such as code completion [ 42], real-time chatbots [7, 40],
+customer support [26], online legal advice [12], and beyond. The
+latency is critical for a good user experience, and the batch size
+is usually set as 1 to meet the real-time requirement. However,
+current LLMs suffer from both heavy computation and memory
+overheads because of the explosive growth model size of LLMs.
+Taking GPT-3 [6] as an example, it has 175 billion parameters (i.e.,
+350GB in FP16), requiring about 660TOPS of computation amount
+to complete a single inference.
+Model compression methods [ 13] (e.g., sparsification, quanti-
+zation, etc.) are commonly applied to address the above issues.
+However, the unique computation schemes of these methods are
+not efficiently supported by current hardware platforms, like GPUs,
+for LLMs. From the computation perspective, current GPUs only
+support structured sparsity (e.g., 2:4 sparsity), leading to significant
+algorithm accuracy loss of LLMs [19]. In contrast, the unstructured
+sparsity ensuring algorithm accuracy cannot bring end-to-end ac-
+celeration for LLMs. For example, the 75% unstructured sparsity
+only leads to negligible end-to-end speedup [18]. From the mem-
+ory perspective, quantization and large on-chip memory can re-
+duce data access. Recent algorithm studies [ 14, 28] are pushing
+the limit of bit-width with mixed-precision quantization. How-
+ever, the alignment feature of GPU’s cache and SIMD architecture
+requires homogeneous bit-widths of LLM parameters for weight
+access reduction [49]. Compounding the issue, GPU’s KB-scaled
+share memory of SMs cannot hold all the activations for LLM text
+generation.
+FPGAs are potential solutions to accelerate LLM inference and
+explore the benefits brought by model compression, which has
+been proven in previous deep learning models [21, 22, 39, 43, 55].
+However, efficient LLM inference on FPGAs needs to solve the
+following challenges (Fig. 2):
+• Low computation efficiency. Flexible sparsity patterns
+(e.g., block sparsity [53], N:M sparsity [8], etc.) in LLM leads
+to low computation efficiency.
+• Underutilized memory bandwidth. The decode stage of
+LLM repetitively accesses fine-grained data from off-chip
+memory, leading to underutilized bandwidth (29-43%).
+• Large compilation overheads. The dynamic sparsity pat-
+terns and input lengths of LLMs constitute a large design
+space. For example, generating instructions for 2048 input
+token length results in∼TB storage overhead on FPGAs.
+Always-on-chipdecode&mixed-precisionsupport
+Length adaptivecompilation
+1.Heavy ComputationCompress model with various sparse pattern
+Bandwidth1.9x↑
+On-chipbufferOff-chipmemory
+abcdChallenges for LLMsSolutionsin FlightLLM
+4b4b4b4b8b8b8b8b8b8b8b8b
+ConfigurablesparseDSP chain
+2.Heavy Memory AccessRepetitive activation write to off-chip memory
+3.Dynamic Input LengthEach instruction file for each input length
+Inferencecase
+Largespace!Smallspace!~TB→GB
+HW. infoPerf.
+MACMAC
+MACMACab
+cdMACMAC
+MACMACa
+b
+Efficiency1.6x↑idle
+idle0
+Figure 2: Three challenges of LLM inference on FPGAs, and
+the corresponding solutions in FlightLLM.
+In this paper, we proposeFlightLLM, enabling efficient LLMs in-
+ference with a complete mapping flow on FPGAs (Fig. 1). FlightLLM
+innovatively points out that the computation and memory over-
+head of LLMs can be solved by utilizing FPGA-specific resources
+(e.g., DSP48 and heterogeneous memory hierarchy). To address
+the challenges of low computation efficiency, FlightLLM exploits
+a configurable sparse DSP chain. We introduce a flexible cascaded
+DSP48 architecture to support different sparsity patterns with high
+computation efficiency (i.e., runtime DSP utilization). To tackle the
+underutilized memory bandwidth, FlightLLM proposes an always-
+on-chip decode scheme. Activations reside in the on-chip memory
+during the decode stage with the support of mixed-precision quan-
+tization. To reduce the compilation overhead, FlightLLM proposes
+a length adaptive compilation method. Instructions for consecutive
+input token length are grouped, and the total storage overhead for
+instructions can be reduced.
+The main contributions of this paper are as follows.
+• We propose a configurable sparse DSP chain to support differ-
+ent sparsity patterns. FlightLLM improves the computation
+efficiency by 1.6× with block-wise and N:M sparsity.
+• We propose an always-on-chip decode scheme with mixed-
+precision support. Flig
+
+--- PAGE 3 ---
+FlightLLM: Efficient Large Language Model Inference with a Complete Mapping Flow on FPGAs FPGA ’24, March 3–5, 2024, Monterey, CA, USA
+Who
+won
+?
+W1 W2A
+(a)
+WQ WvQ
+Multi-head
+Attention
+V
+Wk
+won
+?
+Alex
+O
+FFN
+Who
+won
+?
+Alex
+won
+?
+Alex
+won
+(b)
+Transformer
+Block
+W1 W2
+WQ Wv
+Q
+Wk
+O
+FFNKcache
+Transformer
+Block
+A
+Multi-head
+Attention
+V
+Vcache
+T
+T
+WO
+WO
+Figure 3: The (a) prefill and (b) decode stage of LLMs. Colored
+squares are weights or cached data. Gray denotes activations.
+2 BACKGROUND AND RELATED WORK
+2.1 Background
+Transformer-based LLMs [41, 54] achieve state-of-the-art (SOTA)
+performance across all kinds of Natural Language Processing (NLP)
+tasks. The transformer model architecture consists of many cas-
+caded transformer blocks and each transformer block generally
+includes two types of networks: the Multi-Head Attention (MHA)
+and the Feed Forward Network (FFN).
+Given𝑁 input tokens embedded in 𝐷 dimensional space𝑋∈
+R𝑁×𝐷, the MHA projects the token embedding asℎ heads’ query
+𝑄, key 𝐾 and value𝑉 matrices in Rℎ×𝑁×𝐷 space and performs
+attention operation for each head as shown in equation 1.
+𝑄 =𝑋𝑊𝑄,𝐾 =𝑋𝑊𝐾,𝑉 =𝑋𝑊𝑉 ;𝑂 = softmax(𝑄𝐾𝑇)𝑉 (1)
+where𝑊𝑄,𝑊𝐾 ,𝑊𝑉 represent the weight matrix in MHA.
+The FFN further transforms each token embedding. Given the
+MHA output matrix 𝑂 ∈ Rℎ×𝑁×𝐷, FFN passes it through two
+fully connected layers with a non-linear activation function𝑔 and
+generates the token embedding for the next transformer block.
+𝑋 =𝑔(𝑂𝑊1)𝑊2 (2)
+where,𝑊1,𝑊2 represent the two weight matrix in FFN.
+As shown in Fig. 3, the workflow of LLMs can be divided into
+two main stages: the prefill stage and the decode stage. In the prefill
+stage, LLM takes a prompt from the user which is a sequence of
+tokens as the input (e.g. the " Who won ? " in Figure.3 (a)). Then,
+LLM will understand the context of the prompt and generates the
+first response token (e.g. the "Alex" in Figure.3 (a)). All the𝑁 input
+tokens are processed simultaneously with high throughput. In the
+decode stage, LLM treats the newly generated token as length𝑁 = 1
+input and generates the next token (e.g. the "won" in Figure.3 (b)).
+Since LLM only processes one new token at a time in the decode
+stage, the matrix-matrix multiplications in equation 1 and 2 become
+matrix-vector multiplications. The decode stage is called iteratively
+to generate the response token by token.
+2.2 Related Work
+Efficient Transformer. To tackle the extreme overhead of LLMs,
+various compression techniques are commonly used. Quantiza-
+tion [15, 20, 33, 49, 52] approaches use low-bit integers to substitute
+the 16-bit floating point parameters and activations for inference.
+Computing Core
+Memory 
+Management 
+Unit (MMU)
+Matrix
+Processing
+Engine (MPE)
+Special
+Function
+Unit (SFU)
+Instruction Scheduler
+HBM DDR
+Memory Controller
+Task
+SchedulerCPU
+Figure 4: The overall architecture of FlightLLM, including
+task scheduler, memory controller and computing cores.
+Sparse attention [4, 8, 9, 45, 53] and weight pruning [ 19, 30] ap-
+proaches skip part of the attention matrix or weight matrix comput-
+ing according to the defined sparse pattern. Various sparse patterns
+are proposed for different tasks and transformers, including lo-
+cal diagonal pattern [ 4], block sparse [ 9, 29, 30, 53], N:M sparse
+pattern [8, 19], row-column skipping pattern [ 45], unstructured
+pattern [19] and so on.
+LLM-related Accelerators. Previous work [17, 23–25, 27, 32, 34,
+37, 45, 47] propose customized architecture design for transformer
+models. Some work [17, 24, 32, 34, 44, 45] lay more emphasis on
+accelerating sparse attention. They design specialized architectures
+to fully utilize the pre-defined static attention pattern [17, 32] or
+dynamically generated attention pattern [34, 37, 44, 45]. Recently,
+FACT [37] points out the importance of compressing linear layers
+with mixed-precision quantization to help reduce latency. However,
+these methods cannot accelerate the decode stage of LLMs since
+they mainly focus on the prefill stage for discriminative models,
+like medium-sized BERT [16] model. DFX [25] emphasizes the ac-
+celeration of the decode stage of LLMs. However, it lacks hardware
+support for model compression of LLMs, making it hard to further
+expand model size or maximum token size.
+3 COMPUTING ARCHITECTURE
+3.1 Overall Architecture
+We design a high-performance FPGA-based accelerator for gen-
+erative LLMs by making full use of FPGA resources. Combined
+with compression techniques like sparsification and quantization,
+FlightLLM can effectively accelerate the generative LLMs and re-
+duce the inference overhead. As shown in Fig. 4, the overall hard-
+ware architecture of FlightLLM mainly includes a task scheduler,
+memory controller, and multiple computing cores (short as cores).
+The accelerator uses model parallelism on multiple cores to com-
+plete the LLM inference task. The task scheduler assigns tasks to
+different cores and controls data synchronization.
+The components of each core include the unified Matrix Pro-
+cessing Engine (
+
+--- PAGE 12 ---
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA Shulin Zeng et al.
+[46] Zeke Wang, Hongjing Huang, Jie Zhang, and Gustavo Alonso. 2020. Shuhai:
+Benchmarking high bandwidth memory on fpgas. In 2020 IEEE 28th Annual
+International Symposium on Field-Programmable Custom Computing Machines
+(FCCM). IEEE, 111–119.
+[47] Zhican Wang, Gang Wang, Honglan Jiang, Ningyi Xu, and Guanghui He. 2023.
+COSA: Co-Operative Systolic Arrays for Multi-head Attention Mechanism in
+Neural Network using Hybrid Data Reuse and Fusion Methodologies. In 2023
+60th ACM/IEEE Design Automation Conference (DAC). IEEE, 1–6.
+[48] Jason Wei, Yi Tay, Rishi Bommasani, Colin Raffel, Barret Zoph, Sebastian
+Borgeaud, Dani Yogatama, Maarten Bosma, Denny Zhou, Donald Metzler, et al.
+2022. Emergent abilities of large language models.arXiv preprint arXiv:2206.07682
+(2022).
+[49] Guangxuan Xiao, Ji Lin, Mickael Seznec, Hao Wu, Julien Demouth, and Song
+Han. 2023. Smoothquant: Accurate and efficient post-training quantization for
+large language models. In International Conference on Machine Learning . PMLR,
+38087–38099.
+[50] Xilinx. 2021. Alveo U280 Data Center Accelerator Card Data Sheet. https:
+//docs.xilinx.com/v/u/en-US/ds963-u280.
+[51] Xilinx. 2023. Versal™ Architecture and Product Data Sheet. https://docs.xilinx.
+com/v/u/en-US/ds950-versal-overview.
+[52] Zhewei Yao, Reza Yazdani Aminabadi, Minjia Zhang, Xiaoxia Wu, Conglong Li,
+and Yuxiong He. 2022. Zeroquant: Efficient and affordable post-training quanti-
+zation for large-scale transformers. Advances in Neural Information Processing
+Systems 35 (2022), 27168–27183.
+[53] Manzil Zaheer, Guru Guruganesh, Kumar Avinava Dubey, Joshua Ainslie, Chris
+Alberti, Santiago Ontanon, Philip Pham, Anirudh Ravula, Qifan Wang, Li Yang,
+et al. 2020. Big bird: Transformers for longer sequences. Advances in neural
+information processing systems 33 (2020), 17283–17297.
+[54] Susan Zhang, Stephen Roller, Naman Goyal, Mikel Artetxe, Moya Chen, Shuohui
+Chen, Christopher Dewan, Mona Diab, Xian Li, Xi Victoria Lin, et al . [n. d.].
+Opt: Open pre-trained transformer language models, 2022. URL https://arxiv.
+org/abs/2205.01068 ([n. d.]).
+[55] Yichi Zhang, Junhao Pan, Xinheng Liu, Hongzheng Chen, Deming Chen, and
+Zhiru Zhang. 2021. FracBNN: Accurate and FPGA-efficient binary neural net-
+works with fractional activations. In The 2021 ACM/SIGDA International Sympo-
+sium on Field-Programmable Gate Arrays . 171–182.
+[56] Han Zhao, Quan Chen, Yuxian Qiu, Ming Wu, Yao Shen, Jingwen Leng, Chao
+Li, and Minyi Guo. 2018. Bandwidth and locality aware task-stealing for many-
+core architectures with bandwidth-asymmetric memory. ACM Transactions on
+Architecture and Code Optimization (TACO) 15, 4 (2018), 1–26.
+[57] Aojun Zhou, Yukun Ma, Junnan Zhu, Jianbo Liu, Zhijie Zhang, Kun Yuan, Wenxiu
+Sun, and Hongsheng Li. 2021. Learning n: m fine-grained structured sparse neural
+networks from scratch. arXiv preprint arXiv:2102.04010 (2021).

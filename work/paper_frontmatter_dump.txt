@@ -1,0 +1,1038 @@
+
+====================================================================================================
+01_AddNet_Deep_Neural_Networks_Using_FPGA-Optimized_Multipliers - TVLSI20.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\AddNet_Deep_Neural_Networks_Using_FPGA-Optimized_Multipliers - TVLSI20.pdf
+PAGES: 14
+--- PAGE 1 ---
+IEEE TRANSACTIONS ON VERY LARGE SCALE INTEGRATION (VLSI) SYSTEMS, VOL. 28, NO. 1, JANUARY 2020 115
+AddNet: Deep Neural Networks Using
+FPGA-Optimized Multipliers
+Julian Faraone ,M a r t i nK u m m, Member , IEEE, Martin Hardieck, Peter Zipf, Member , IEEE,
+Xueyuan Liu, David Boland, and Philip H. W. Leong , Senior Member , IEEE
+Abstract— Low-precision arithmetic operations to accelerate
+deep-learning applications on ﬁeld-programmable gate arrays
+(FPGAs) have been studied extensively, because they offer the
+potential to save silicon area or increase throughput. However,
+these beneﬁts come at the cost of a decrease in accuracy. In this
+article, we demonstrate that reconﬁgurable constant coefﬁcient
+multipliers (RCCMs) offer a better alternative for saving the
+silicon area than utilizing low-precision arithmetic. RCCMs
+multiply input values by a restricted choice of coefﬁcients using
+only adders, subtractors, bit shifts, and multiplexers (MUXes),
+meaning that they can be heavily optimized for FPGAs. We pro-
+pose a family of RCCMs tailored to FPGA logic elements to
+ensure their efﬁcient utilization. To minimize information loss
+from quantization, we then develop novel training techniques
+that map the possible coefﬁcient representations of the RCCMs
+to neural network weight parameter distributions. This enables
+the usage of the RCCMs in hardware, while maintaining high
+accuracy. We demonstrate the beneﬁts of these techniques using
+AlexNet, ResNet-18, and ResNet-50 networks. The resulting
+implementations achieve up to 50% resource savings over
+traditional 8-bit quantized networks, translating to signiﬁcant
+speedups and power savings. Our RCCM with the lowest resource
+requirements exceeds 6-bit ﬁxed point accuracy, while all other
+implementations with RCCMs achieve at least similar accuracy
+to an 8-bit uniformly quantized design, while achieving signiﬁcant
+resource savings.
+Index Terms — Digital arithmetic, ﬁeld programmable gate
+arrays (FPGAs), neural networks, neural network hardware,
+quantization.
+I. I NTRODUCTION
+C
+ONVOLUTIONAL neural networks (CNNs) have been
+widely adopted in recent computer vision applica-
+tions due to their superior prediction capabilities, with
+researchers gravitating toward larger networks with higher
+Manuscript received February 12, 2019; revised June 5, 2019; accepted
+August 11, 2019. Date of publication September 25, 2019; date of current
+version December 27, 2019. This work was supported in part by the Australia–
+Germany Joint Research Co-operation Scheme and in part by the German
+Academic Exchange Service (DAAD) under Grant 57388068. (Corresponding
+author: Julian Faraone.)
+J. Faraone, X. Liu, D. Boland, and P. H. W. Leong are with the
+School of Electrical and Information Engineering, The University of Syd-
+ney, Sydney, NSW 2006, Australia (e-ma il: julian.faraone@sydney.edu.au;
+david.boland@sydney.edu.au; philip.leong@sydney.edu.au).
+M. Kumm is with the Applied Computer Science Faculty, Fulda University
+of Applied Sciences, 36037 Fulda, Ge rmany (e-mail: martin.kumm@cs.
+hs-fulda.de).
+M. Hardieck and P. Zipf are with the Digital Technology Group, Uni-
+versity of Kassel, 34121 Kassel, Germany ( e-mail: hardieck@uni-kassel.de;
+zipf@uni-kassel.de).
+Color versions of one or more of the ﬁgures in this article are available
+online at http:/
+
+====================================================================================================
+02_An Efficient Softcore Multiplier Architecture for Xilinx FPGAs - ARITH15.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\An Efficient Softcore Multiplier Architecture for Xilinx FPGAs - ARITH15.pdf
+PAGES: 8
+--- PAGE 1 ---
+An Efﬁcient Softcore Multiplier Architecture for Xilinx FPGAs
+Martin Kumm, Shahid Abbas and Peter Zipf
+University of Kassel, Germany
+Digital Technology Group
+Email: kumm@uni-kassel.de, shahid.abbas@student.uni-kassel.de, zipf@uni-kassel.de
+Abstract
+This work presents an efﬁcient implementation of
+a softcore multiplier , i. e., a multiplier architecture
+which can be efﬁciently mapped to the slice resources
+of modern Xilinx FPGAs. Instead of dividing the
+multiplication into the generation of partial products
+and the summation using a compressor tree, as done
+in modern multipliers, an array-like architecture is
+proposed. Each row of the array generates a partial
+product which is directly added to results of previous
+rows using the fast carry chain. A radix-4 Booth
+encoding/decoding is used to reduce the I/O count of
+the partial product generation which makes it possible
+to map both, the Booth encoder and decoder , into a
+single 6-input look up table (LUT). Like a conventional
+Booth multiplier , this nearly halves the number of
+rows compared to a ripple carry array multiplier . In
+addition, the compressor tree is completely avoided
+and an efﬁcient and regular structure retains that uses
+up to 50 % less slice resources compared to previous
+approaches and offers a multiply accumulate (MAC)
+operation without extra resources.
+1. Introduction
+Efﬁcient multipliers are a key element for many
+applications in the domain of digital signal process-
+ing, image processing, scientiﬁc computing and many
+more. This demand on multipliers and their large
+complexity when mapped to the logic of ﬁeld pro-
+grammable gate arrays (FPGAs) forced the vendors to
+embed hard multiplier blocks and DSP blocks (which
+include pre and post addition) into the fabric of mod-
+ern FPGAs. However, there are two main limitations
+when using embedded multipliers or DSP blocks: First,
+only a limited number is available and second, their
+word size is restricted. Furthermore, they have ﬁxed
+locations and are often asymmetric in word size (like
+the 18× 24 multiplier in Xilinx FPGAs). The limited
+word size can be extended by using several smaller
+multipliers and additional adders. A method called
+tiling was proposed to construct large multiplications
+using several DSP blocks and softcore multipliers in
+an efﬁcient way [1], [2]. Here, the softcore multipliers
+are needed to “ﬁll gaps” where a DSP block is too
+large. Besides the large multipliers, many applications
+require only small word size multipliers, like, e. g.,
+image and video processing applications, where typical
+word sizes are 8 to 10 bit. Here, large parts of the
+DSP block are wasted. As a consequence, there is a
+demand for softcore multipliers whenever DSP blocks
+are not sufﬁcient or their word size does not match to
+the requirements.
+While a rich body of literature exists for parallel
+multipliers in application speciﬁc integrated circuits
+(ASICs), there is only few dealing with softcore mul-
+tipliers on FPGAs. Kumar et al. presented a softcore
+multiplier structure which is based on a Booth mul-
+tiplier [3] where the partial products are obtained
+from Booth recoding of one multiplicand and the
+compressor tree is replaced by a ripple-carry adder
+tree to beneﬁt from the fast carry chain of the FPGA
+[4]. While this is suitable for the 4-input LUTs 
+
+====================================================================================================
+03_Deep Learning with Int8 Optimization on Xilinx Devices.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Deep Learning with Int8 Optimization on Xilinx Devices.pdf
+PAGES: 11
+--- PAGE 1 ---
+WP486 (v1.0.1) April 24, 2017 www.xilinx.com  1
+© Copyright 2016–2017 Xilinx, Inc. Xi linx, the Xilinx logo, Artix, ISE, Kintex, Spartan, Virtex, Vivado, Zynq, and other design ated brands included herein are trademarks of 
+Xilinx in the United States and other countries. All othe r trademarks are the property of their respective owners.
+ 
+Xilinx INT8 optimization provides the best performance and most 
+power efficient computational te chniques for deep learning 
+inference. Xilinx's integrated DS P architecture can achieve 1.75X 
+solution-level performance at INT8 deep learning operations than 
+other FPGA DSP architectures.
+White Paper:  UltraScale and UltraScale+ FPGAs
+WP486 (v1.0.1) April 24, 2017
+Deep Learning 
+with INT8 Optimization 
+on Xilinx Devices
+By:  Yao Fu, Ephrem Wu, Ashish Sirasao, Sedny Attia, Kamran Khan, and Ralph Wittig
+ABSTRACT
+The intent of this white paper is to explore INT8 deep learning operations 
+implemented on the Xilinx DSP48E2 slice,  and how this contrasts with other 
+FPGAs. With INT8, Xilinx's DSP ar chitecture can achieve 1.75X peak 
+solution-level performance at INT8 deep learning operation per second (OPS) 
+compared to other FPGAs with the same  resource count. As deep learning 
+inference exploits lower bit precision without sacrificing accuracy, efficient 
+INT8 implementations are needed. 
+Xilinx's DSP architecture and libraries are optimized for INT8 deep learning 
+inference. This white paper describes how the DSP48E2 slice in Xilinx's 
+UltraScale and UltraScale+ FPGAs can be used to process two concurrent INT8 
+multiply and accumulate (MACC) operat ions while sharing the same kernel 
+weights. It also explains why 24-bit is the minimal size for an input to utilize this 
+technique, which is unique to Xilinx. Th e white paper also includes an example 
+of this INT8 optimization technique to show its relevance by revisiting the 
+fundamental operations of neural networks
+
+--- PAGE 2 ---
+WP486 (v1.0.1) April 24, 2017 www.xilinx.com  2
+Deep Learning with INT8 Opti mization on Xilinx Devices
+INT8 for Deep Learning
+Deep neural networks have propelled an evolutio n in machine learning fields and redefined many 
+existing applications with new human-level AI capabilities. 
+While more accurate deep learning models have been developed, their complexity is accompanied 
+by high compute and memory bandwidth challenges . Power efficiency is driving innovation in 
+developing new deep learning inference models that require lower compute intensity and memory 
+bandwidth but must not be at the cost of accura cy and throughput. Reducing this overheard will 
+ultimately increase power efficiency and lower the total power required. 
+In addition to saving power du ring computation, lower bit-widt h compute also lowers the power 
+needed for memory bandwidth, because fewer bits are transfe rred with the same amount of 
+memory transactions.
+Research has shown that floating point computations  are not required in deep learning inferences 
+to keep the same level of accuracy [Ref 1][Ref 2][Ref 3] , and many applications, such as image 
+classification, only require INT8 or lower fixed point compute precision to keep an acceptable 
+inference accuracy [Ref 2][Ref 3] . Table 1  shows fine-tuned networks with dynamic fixed point 
+parameters and outputs for convolutional and fu
+
+====================================================================================================
+04_Hardware-Efficient_Multipliers_With_FPGA-Based_Approximation_for_Error-Resilient_Applicati.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Hardware-Efficient_Multipliers_With_FPGA-Based_Approximation_for_Error-Resilient_Applications - TCASI24.pdf
+PAGES: 12
+--- PAGE 1 ---
+IEEE TRANSACTIONS ON CIRCUITS AND SYSTEMS—I: REGULAR PAPERS, VOL. 71, NO. 12, DECEMBER 2024 5919
+Hardware-Efficient Multipliers With FPGA-Based
+Approximation for Error-Resilient Applications
+Yi Guo
+ , Member, IEEE, Qilin Zhou, Xiu Chen, Student Member, IEEE, and Heming Sun
+ , Member, IEEE
+Abstract— Approximate multipliers enable hardware savings
+for error-resilient computation-intensive applications. Most exist-
+ing approximate multipliers have been on ASIC-based circuits.
+They might not achieve comparable performance gains when
+used for FPGA-based accelerators. In this paper, we propose
+hardware-efficient FPGA-based accurate and approximate 4 ×
+4 multipliers with novel methodologies of look-up table (LUT)
+sharing and carry switching. The LUT resources can be fully uti-
+lized by sharing two LUTs with the same inputs. To compensate
+for the accuracy loss, the truncated carry is partially reserved by
+switching it to the adjacent calculation. For higher-order multi-
+pliers, three approximate adders are proposed to sum the result of
+the multipliers with arbitrary size. 140 types of 8 × 8 multipliers
+are constructed by combining the proposed 4 × 4 multipliers
+and adders, providing various multiplication choices for different
+demands. The proposed approximate 8 × 8 multiplier can achieve
+up to 38.75%, 17.29%, and 28.17% improvements in power,
+latency, and area over the Xilinx exact multiplier, respectively.
+Moreover, the proposed accurate and approximate 8 × 8 multi-
+pliers with different adders are extended to 16 × 16 multipliers.
+As evidenced by the performance of the 16 × 16 multipliers,
+our methodology demonstrates the capability to design higher-
+order multipliers flexibly. Compared with previous works under
+a similar accuracy loss, the proposed multiplier achieves more
+hardware savings. Furthermore, the approximate multipliers are
+assessed on the application of image processing to validate the
+practical applicability. We create a library of the proposed mul-
+tipliers which is open-source at https://github.com/YnuGuoLab
+/Approx_Mul_FPGA/ and assist in further reproducing and
+development.
+Index Terms— Approximate computing, FPGA, multiplier.
+I. I NTRODUCTION
+W
+ITH the advancement of technology, the primary fac-
+tor limiting the development of integrated circuits is
+Manuscript received 22 January 2024; revised 18 April 2024 and 1 June
+2024; accepted 2 June 2024. Date of publication 1 July 2024; date of
+current version 27 November 2024. This work was supported in part by
+Yunnan Fundamental Research Project under Grant 202301AU070011, in part
+by Yunnan Scientific Research Project under Grant 2023J0015, in part
+by JSPS KAKENHI under Grant JP23H03366, and in part by the Program
+of Yunnan Key Laboratory of Intelligent Systems and Computing under
+Grant 202405A V340009. This article was recommended by Associate Editor
+J. Zhang. (Corresponding author: Yi Guo.)
+Yi Guo is with the Graduate School of Information, Science and Engineering
+and Yunnan Key Laboratory of Intelligent Systems and Computing, Yunnan
+University, Kunming 650106, China (e-mail: guoyi@ynu.edu.cn).
+Qilin Zhou and Xiu Chen are with the Graduate School of Informa-
+tion, Science and Engineering, Yunnan University, Kunming 650106, China
+(e-mail: qilinzhoujob@gmail.com; xiuc
+
+====================================================================================================
+05_High-Performance_Accurate_and_Approximate_Multipliers_for_FPGA-Based_Hardware_Accelerators.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\High-Performance_Accurate_and_Approximate_Multipliers_for_FPGA-Based_Hardware_Accelerators - TCAD22.pdf
+PAGES: 14
+--- PAGE 1 ---
+IEEE TRANSACTIONS ON COMPUTER-AIDED DESIGN OF INTEGRATED CIRCUITS AND SYSTEMS, VOL. 41, NO. 2, FEBRUARY 2022 211
+High-Performance Accurate and Approximate
+Multipliers for FPGA-Based Hardware Accelerators
+Salim Ullah , Semeen Rehman, Muhammad Shaﬁque , Senior Member, IEEE,
+and Akash Kumar , Senior Member, IEEE
+Abstract—Multiplication is one of the widely used arithmetic
+operations in a variety of applications, such as image/video
+processing and machine learning. FPGA vendors provide high-
+performance multipliers in the form of DSP blocks. These
+multipliers are not only limited in number and have ﬁxed loca-
+tions on FPGAs but can also create additional routing delays
+and may prove inefﬁcient for smaller bit-width multiplications.
+Therefore, FPGA vendors additionally provide optimized soft
+IP cores for multiplication. However, in this work, we advocate
+that these soft multiplier IP cores for FPGAs still need bet-
+ter designs to provide high-performance and resource efﬁciency.
+Toward this, we present generic area-optimized, low-latency accu-
+rate, and approximate softcore multiplier architectures, which
+exploit the underlying architectural features of FPGAs, i.e.,
+lookup table (LUT) structures and fast-carry chains to reduce
+the overall critical path delay (CPD) and resource utilization of
+multipliers. Compared to Xilinx multiplier LogiCORE IP, our
+proposed unsigned and signed accurate architecture provides
+up to 25% and 53% reduction in LUT utilization, respectively,
+for different sizes of multipliers. Moreover, with our unsigned
+approximate multiplier architectures, a reduction of up to 51%
+in the CPD can be achieved with an insigniﬁcant loss in output
+accuracy when compared with the LogiCORE IP. For illustra-
+tion, we have deployed the proposed multiplier architecture in
+accelerators used in image and video applications, and eval-
+uated them for area and performance gains. Our library of
+accurate and approximate multipliers is opensource and avail-
+able online at https://cfaed.tu-dresden.de/pd-downloads to fuel
+further research and development in this area, facilitate repro-
+ducible research, and thereby enabling a new research direction
+for the FPGA community.
+Index Terms —Accelerators, approximate computing, high
+performance, multipliers, neural networks, reduced area.
+I. I NTRODUCTION
+M
+ULTIPLICATION is one of the basic arithmetic opera-
+tions used extensively in the domain of digital signal
+and image processing. FPGA vendors, such as Xilinx and
+Manuscript received June 19, 2020; revised November 10, 2020 and
+December 30, 2020; accepted January 16, 2021. Date of publication
+February 2, 2021; date of current version January 20, 2022. This work was
+supported by the German Research Foundation (DFG) funded Project ReAp
+under Grant 380524764. This article was recommended by Associate Editor
+S. Reda. (Corresponding author: Akash Kumar.)
+Salim Ullah and Akash Kumar are with the Chair for Processor
+Design, Technische Universität Dresden, 01062 Dresden, Germany (e-mail:
+salim.ullah@tu-dresden.de; akash.kumar@tu-dresden.de).
+Semeen Rehman is with the Institute of Computer Technology,
+Technische Universität Wien, 1040 Vienna, Austria (e-mail:
+semeen.rehman@tuwien.ac.at).
+Muhammad Shaﬁque is with the Division of Engineering,
+New York Uni
+
+====================================================================================================
+06_Low-power approximate multipliers using encoded partial products and approximate compresso.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Low-power approximate multipliers using encoded partial products and approximate compressors.pdf
+PAGES: 13
+--- PAGE 1 ---
+2156-3357 (c) 2018 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission. See http://www.ieee.org/publications_standards/publications/rights/index.html for more information.
+This article has been accepted for publication in a future issue of this journal, but has not been fully edited. Content may change prior to final publication. Citation information: DOI 10.1109/JETCAS.2018.2832204, IEEE Journal
+on Emerging and Selected Topics in Circuits and Systems
+Abstract—Approximate computing has been considered to 
+improve the a ccuracy-performance trade -off in  error-
+tolerant applications. For many of these applications, 
+multiplication is a key arithmetic operation. Given that 
+approximate compressors are a key element in the design of 
+power-efficient approximate multipliers , we first  propose 
+an initial approximate 4:2 compressor that introduces a 
+rather large error to the output. However, t he number of 
+faulty rows in the compressor’s truth table is significantly 
+reduced by encoding its inputs using generate and 
+propagate signals. Based on this improved compressor, two 
+4×4 multipliers are designed with different accuracies and 
+then are used as building blocks for scaling up to 16×16 and 
+32×32 multipliers. According to the mean relative error 
+distance (MRED), the most accurate of the proposed 16×16 
+unsigned designs has a 44% smaller power -delay product 
+(PDP) compared to other designs with comparable 
+accuracy. The radix-4 signed Booth multiplier constructed 
+using the proposed compressor achieves a 52% reduction in 
+the PDP -MRED product compared to  other approximate 
+Booth multipliers with comparable accuracy. The proposed 
+multipliers outperform other approximate designs in image 
+sharpening and  joint photographic experts group (JPEG) 
+applications by achieving higher quality outputs with lower 
+power consumption s. For the first time,  we show the  
+applicability and practicality of approximate multipliers  in 
+multiple-input multiple -output (MIMO) antenna 
+communication systems with error control coding.  
+ 
+Index Terms —approximate computing, multiplier, MIMO, 
+image sharpening, JPEG. 
+ 
+I. INTRODUCTION 
+ 
+HE continuing shrinkage in the minimum feature size has 
+made integrated circuit behavior increasingly vulnerable  to 
+process, voltage an d temperature (PVT) variations  as well as  
+soft error s [1], [2] . Thus the challenge of ensuring strictly  
+accurate computing is increasing [3]. On the other hand, there 
+exist many applications , such as  multimedia and machine 
+learning, which do not necessarily need fully accurate results. 
+Such applications are tolerant of small inaccuracies [4]-[6] and 
+so approximate computing can be applicable due to its 
+potentially significant reduction in design costs while still 
+producing sufficiently accurate results [7], [8]. 
+Multiplication is a key arithmetic operation that is optimized 
+in digital processors. Many approximate multiplier designs 
+have been proposed in the literature [9]-[18]. In [9], the authors 
+proposed two approximate error accumulation technique s to 
+perform partial product accumulation, resulting in approximate 
+multipliers AM1 and AM2 . The truncation of the least 
+significant bits ( LSBs) of the partial products i
+
+====================================================================================================
+07_More_AddNet_A_deeper_insight_into_DNNs_using_FPGA-optimized_multipliers - ISCAS23.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\More_AddNet_A_deeper_insight_into_DNNs_using_FPGA-optimized_multipliers - ISCAS23.pdf
+PAGES: 5
+--- PAGE 1 ---
+More AddNet: A deeper insight into DNNs using
+FPGA-optimized multipliers
+Martin Hardieck∗1, Tobias Habermann†1, Fabian Wagner∗, Michael Mecik†, Martin Kumm†, Peter Zipf∗
+∗University of Kassel, Germany, {martin.hardieck, fabian.wagner, zipf}@uni-kassel.de,
+†Fulda University of Applied Science, Fulda, Germany, {tobias.habermann, michael.mecik, martin.kumm}@cs.hs-fulda.de
+Abstract—We present a training tool ﬂow for deep neural
+networks (DNN) optimized for a hardware-efﬁcient FPGA-
+implementation based on reconﬁgurable constant-coefﬁcient
+multipliers (RCCMs). RCCMs replace the costly generic
+multipliers by shift-and-add operations. In previous work, it
+was shown that RCCMs offer a better alternative for saving
+FPGA area than utilizing low-precision arithmetic. This work
+proposes an improved tool ﬂow that enables layer-wise weight
+quantization, a larger search space by additional RCCM
+coefﬁcient sets and an optimized retraining. This leads to
+an improved accuracy compared to the previous method. In
+addition, hardware requirements are lower as only 1 to 3
+adders per multiplication are used. This reduces the overall
+complexity and the required memory bandwidth simultaneously.
+We evaluate our tool ﬂow using multiple networks (ResNets) on
+the ImageNet data set.
+Index Terms—FPGA, Neural Network Accelerator, Arithmetic,
+Neural Network Training, Tool ﬂow, Fixed-Point, Low-Precision
+I. I NTRODUCTION
+Deep Neural Networks (DNNs) are increasingly important
+for many application areas from embedded systems [1] to
+data centers [2]. Thus, their area and energy efﬁcient imple-
+mentation is becoming a major concern [3]. In this context,
+ﬁeld-programmable gate array (FPGA) implementations have
+shown the capability to outperform CPU or GPU based
+inference [4], [5]. FPGAs offer the ability to adapt arithmetic
+implementations to characteristics of a speciﬁc DNN, but this
+regularly requires a parameter quantization to reduce area
+demands. Thus, they increase efﬁciency at the price of a
+largely increased design effort [4].
+AddNet [6] investigates the application of reconﬁgurable
+constant-coefﬁcient multipliers (RCCMs) to replace generic,
+low-precision multiplications in FPGA-based DNN imple-
+mentations. RCCMs are a special type of time-multiplexed
+Multiple Constant Multipliers (MCM [7]), which allow for
+runtime switching between weights in an efﬁcient way. As
+they only use adders, subtractors, bit shifts and multiplexers,
+they are less costly than generic multiplications, even for
+low-precision arithmetic [6]. Additionally, due to the speciﬁc
+encoding scheme for possible coefﬁcient values, a reduction
+in weights storage can be achieved.
+A speciﬁc training scheme is required to adapt RCCM selec-
+tion and the DNN’s coefﬁcient values distribution by mapping
+1These authors contributed equally to this work.
+RCCM coefﬁcient representations to the DNN’s weights distri-
+bution, thus minimizing quantization loss. This sets the ground
+for the principal approach to reduce the mismatch between
+DNN computations and FPGA device architecture by replacing
+low-precision arithmetic by more suitable RCCMs. The idea
+in AddNet is to use a two-step training procedure, starting
+with an already trained network represented by ﬂoating-point
+values as the input. In the ﬁrst step, a ﬁxed-point trainin
+
+====================================================================================================
+08_QUADOL A Quality-Driven Approximate Logic Synthesis Method Leveraging Dual-Output LUTs for.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\QUADOL A Quality-Driven Approximate Logic Synthesis Method Leveraging Dual-Output LUTs for Modern FPGAs.pdf
+PAGES: 7
+--- PAGE 1 ---
+2026 Design, Automation & Test in Europe Conference (DATE 2026)	
+ 978-3-9826741-1-7/DATE26/© 2026 EDAA 
+	QUADOL: A Quality-Driven Approximate Logic Synthesis Method Leveraging Dual-Output
+LUTs for Modern FPGAs
+Jian Shi 1, Chang Meng 2, Xuan Wang 3, and Weikang Qian 1
+1Global College, Shanghai Jiao Tong University, Shanghai, China; 3Synopsys, Inc., Shanghai, China
+2Department of Mathematics and Computer Science, Eindhoven University of Technology, Eindhoven, Netherlands
+Emails: timeshi@sjtu.edu.cn, c.meng@tue.nl, wangxuan@synopsys.com, qianwk@sjtu.edu.cn
+Abstract— Modern FPGAs support dual-output LUT to reduce
+the area of FPGA designs. Several existing works explored the
+use of dual-output LUTs in approximate computing. However,
+they are limited to small-scale arithmetic circuits. To address this
+issue, we propose QUADOL, a qu
+ality-driven a pproximate logic
+synthesis (ALS) method leveraging d ual-output LUTs for modern
+FPGAs. It can approximately merge two single-output LUTs into a
+dual-output LUT. The selection of LUTs for approximate merging
+is formulated as a maximum matching problem to maximize
+area savings. To further enhance existing ALS methods, we also
+propose QUADOL+, a generic framework to integrate QUADOL
+into existing ALS methods. Experimental results showed that
+QUADOL+ achieves significant area reduction over prior works.
+Index Terms—Approximate Computing, Approximate Logic
+Synthesis, Dual-output LUT, Approximate LUT Merging, FPGA
+I. I NTRODUCTION
+Many modern applications, such as image processing and
+machine learning, are computationally intensive yet error-
+tolerant [1]. Approximate computing leverages this tolerance to
+trade accuracy for improved performance and energy efficiency.
+One important area of approximate computing is designing ap-
+proximate circuits for field-programmable gate array (FPGA),
+which is composed of reconfigurable look-up tables (LUTs).
+Modern FPGAs support advanced dual-output LUTs, which
+enable dramatic reduction of the number of required LUTs [2]–
+[5]. A notable method was proposed to exactly merge two
+single-output LUTs into one dual-output LUT using local
+refinement strategies [6]. This process is called LUT merging,
+and the two merged LUTs are called a LUT pair.
+Several works explored the use of dual-output LUTs in the
+design of approximate arithmetic units on FPGAs [7]–[14].
+However, they can only be applied to specific types of circuits,
+such as multipliers [8]–[14] and adders [7]. In addition, they
+can only be applied to small-scale circuits. For example, the
+bit-widths of the multipliers in [8]–[13] do not exceed 8.
+To design general approximate circuits, approximate logic
+synthesis (ALS) for FPGA was proposed [15]–[19]. It aims
+to automatically generate a high-quality circuit with a small
+error but a large area and delay reduction [20]. For example,
+Meng et al. proposed ALSRAC, which iteratively replaces
+signals in an AND-inverter graph (AIG) with new functions
+derived from existing signals, and maps the approximated AIG
+into LUTs [17]. Xiang et al. proposed to iteratively decompose
+a Boolean function approximately to minimize the number of
+This work is supported by the National Natural Science Foundation of China
+under Grant 62574132 and the Natural Science Foundation of Sha
+
+====================================================================================================
+09_Small_Logic-based_Multipliers_with_Incomplete_Sub-Multipliers_for_FPGAs - ARITH24.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Small_Logic-based_Multipliers_with_Incomplete_Sub-Multipliers_for_FPGAs - ARITH24.pdf
+PAGES: 8
+--- PAGE 1 ---
+Small Logic-based Multipliers with
+Incomplete Sub-Multipliers for FPGAs
+Andreas B ¨ottcher, Martin Kumm
+Fulda, University of Applied Sciences, Faculty of Applied Computer Science, Fulda, Germany
+andreas.boettcher@cs.hs-fulda.de, martin.kumm@cs.hs-fulda.de
+Abstract—There is a recent trend in artiﬁcial intelligence (AI)
+inference towards lower precision data formats down to 8 bits
+and less. As multiplication is the most complex operation in
+typical inference tasks, there is a large demand for efﬁcient small
+multipliers. The large DSP blocks have limitations implementing
+many small multipliers efﬁciently. Hence, this work proposes
+a solution for better logic-based multipliers that is especially
+beneﬁcial for small multipliers. Our work is based on the
+multiplier tiling method in which a multiplier is designed out of
+several sub-multiplier tiles. The key observation we made is that
+these sub-multipliers do not necessarily have to perform a com-
+plete (rectangular) N×K multiplication and more efﬁcient sub-
+multipliers are possible that are incomplete (non-rectangular).
+This proposal ﬁrst seeks to identify efﬁcient incomplete irregular
+sub-multipliers and then demonstrates improvements over state-
+of-the-art designs. It is shown that optimal solutions can be found
+using integer linear programming (ILP), which are evaluated in
+FPGA synthesis experiments.
+Index Terms—small multiplier, tiling, computer arithmetic,
+FPGA,
+I. I NTRODUCTION
+With multiplication being one of the most pervasive opera-
+tions in computer arithmetic, its efﬁcient implementation is of
+ongoing interest. When targeting FPGAs the design methods
+have to consider the embedded DSP blocks and look-up-tables
+(LUTs) as the primary resources of modern devices. DSP
+blocks are usually the most convenient to use, as they allow the
+implementation of a multiplication by themselves (for example
+up to one 27×27 or two 18×18 signed or unsigned on Intel
+Stratix10 or 25× 18 signed or 24× 17 unsigned on AMD 7
+Series) but are a relatively limited resource. Multiplier design
+methods have to accommodate for that to avoid the under-
+utilization or premature depletion of DSP resources when
+generating complex circuits [1]–[4]. A multitude of methods
+have been proposed to remedy the underlying design challenge
+[1]–[14].
+In [9], [12], [13], [15] the extraction of smaller multipliers
+from one DSP by additional LUT-based circuitry was pro-
+posed. Conversely, when larger multipliers than the size of
+a single DSP are needed, Karatsuba’s algorithm can be used
+to reduce the number of DSPs [1], [14]. With Slice LUTs
+being one of the most proliﬁc resources on FPGAs, several
+concepts that efﬁciently use LUT resources in conjunction with
+the fast-carry-chain like implementations of vendor-speciﬁc
+Booth-Arrays [3], [7], [8], Baugh-Wooley-Multipliers [5] and
+several optimizations with the fractal-synthesis approach [10],
+[11] were devised.
+Another design process is multiplier tiling [1] which seeks
+to achieve the efﬁcient use of DSPs by combining them with
+supplementary LUT-based sub-multipliers. But as aside from
+heuristics [2], [6], [14] also optimal [4], [16] methods for
+solving the underlying tiling problem are known, in the sense
+that for a given set of sub-multipliers (tiles) the combination
+with the least realizatio
+
+====================================================================================================
+10_Towards_Globally_Optimal_Design_of_Multipliers_for_FPGAs - TC23.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\AM-LUT\Towards_Globally_Optimal_Design_of_Multipliers_for_FPGAs - TC23.pdf
+PAGES: 13
+--- PAGE 1 ---
+IEEE TRANSACTIONS ON COMPUTERS, VOL. 72, NO. 5, MA Y 2023 1261
+Towards Globally Optimal Design
+of Multipliers for FPGAs
+Andreas Böttcher and Martin Kumm
+Abstract—The design of a multiplier typically consists of three
+steps: (1) partial product generation, (2) compressor tree design
+and (3) the selection of the ﬁnal adder . Conventionally, these three
+steps are performed consecutively. However, when targeting FP-
+GAs, there are many possibilities in all three design steps that
+heavily inﬂuence each other . This proposal presents for the ﬁrst
+time a holistic optimization, combining all three optimization steps
+yielding a minimum amount of look-up-tables (LUTs) while it can
+also guarantee the minimal number of (pipeline) stages. An ILP-
+formulation for the determination of a combined, globally optimal
+solution for the multiplier tiling, compressor tree generation and ﬁ-
+nal adder selection is proposed. With globally optimal we mean that
+the best solution is found for a given set of sub-multipliers for partial
+product generation, compressors and ﬁnal adder .This allows to
+improve the quality and evaluate the limitations of existing heuristic
+3-step approaches. It is shown experimentally for the example of
+Xilinx FPGAs, that globally optimal solutions can be obtained for
+multiplier sizes of practical relevance, leading to signiﬁcant LUT
+reductions. Additional packing density experiments show that a
+signiﬁcantly larger number of multiplier instances can be mapped
+to the same device.
+Index Terms —Compressor tree, computer arithmetic, FPGA,
+integer linear programming, multiplier, multiplier tiling.
+I. I NTRODUCTION
+M
+ULTIPLIERS are one of the most essential building
+blocks of arithmetic circuits, hence their efﬁcient im-
+plementation in terms of cost, delay and latency is of vital
+interest due to the impact on the properties of the overall design.
+The demand for multiplications was the motivation to ﬁrst
+embed multipliers and nowadays DSP blocks (including pre/post
+adders) as hard blocks into the fabric of FPGAs. DSPs provide
+the most efﬁcient multipliers and should be used whenever
+possible. However, there are two major limitations [1], [2], [3],
+[4]: 1) When the word size of the DSP is much smaller or larger
+than required: either DSP resources are wasted or have to be
+extended with further DSPs or multipliers based on look-up
+tables (LUTs) to meet the requirements. 2) The number of DSP
+is insufﬁcient: efﬁcient LUT-based multipliers are necessary.
+Manuscript received 31 March 2022; revised 20 December 2022; accepted 1
+January 2023. Date of publication 19 January 2023; date of current version
+7 April 2023. This work was supported by German Research Foundation,
+Project under Grant 426369132 Recommended for acceptance by N. Revol.
+(Corresponding author: Martin Kumm.)
+The authors are with the Applied Computer Science Department, Fulda Uni-
+versity of Applied Sciences, 36037 Fulda, Germany (e-mail: andreas.boettcher
+@cs.hs-fulda.de; martin.kumm@cs.hs-fulda.de).
+Digital Object Identiﬁer 10.1109/TC.2023.3238128
+Fig. 1. Traditional (a) and proposed combined (b) multiplier design process.
+Therefore, a design method is necessary which allows to
+design any size of multiplier and to trade DSPs with LUTs. As
+shown in Fig.1(a), the design of multipliers is usually performed
+in three 
+
+====================================================================================================
+11_An FPGA accelerator for vision transformer with quantization and LUT-based operations-2026.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\An FPGA accelerator for vision transformer with quantization and LUT-based operations-2026.pdf
+PAGES: 8
+--- PAGE 1 ---
+IEICE TRANS. INF. & SYST., VOL.E109–D, NO.1 JANUARY 2026
+41
+PAPER Special Section on Forefront Computing
+An FPGA Accelerator for Vision Transformer with Quantization
+and LUT-Based Operations
+Cheng XUya), Yirong KANyb), Renyuan ZHANGyyc), Nonmembers, and Yasuhiko NAKASHIMAy, Fellow
+SUMMARY This paper proposes a Field-Programmable Gate Array
+(FPGA) accelerator for Vision Transformers (ViTs) with quantization and
+look-up-table (LUT) based operations. First, two improved quantization
+methods are proposed, achieving comparable performance at lower bit-
+widths. Furthermore, linear and nonlinear units’ designs are proposed to
+support diverse operations in ViTs models. Finally, the LUT-based acceler-
+ator design is implemented and evaluated. Experimental results on the Ima-
+geNet dataset demonstrate that our proposed quantization method achieves
+an accuracy of 80.74% at 2-bit width, outperforming state-of-the-art Vision
+Transformer quantization methods by 0.1% to 0.5%. The performance of
+the proposed FPGA accelerator demonstrates a higher energy eﬃciency,
+achieving a peak energy eﬃciency of 7.06 FPS/W and 246 GOPS/W.
+key words: vision transformer, FPGA, quantization, acceleration
+1. Introduction
+Over the past few years, the Transformer architecture has rev-
+olutionized the ﬁeld of natural language processing (NLP).
+Inspired by its success in NLP, Transformer-based models,
+such as Vision Transformers (ViTs), have demonstrated re-
+markable capabilities across various computer vision (CV)
+tasks, often surpassing state-of-the-art convolutional neural
+networks (CNNs) in performance [1]–[3]. These tasks in-
+clude image classiﬁcation [4], [5], object detection [4], [6],
+and image super-resolution [7].
+However, ViTs are characterized by their complex
+model structures, high computational demands, and sig-
+niﬁcant memory requirements, often involving hundreds of
+millions of parameters. For instance, the ViT-L model con-
+tains approximately 307 million parameters, resulting in high
+memory consumption and extended inference times. De-
+ploying such models on resource-constrained edge devices
+is a signiﬁcant challenge. Additionally, many real-time CV
+applications demand low latency, making eﬃcient deploy-
+ment even more critical. Consequently, model compression
+Manuscript received January 9, 2025.
+Manuscript revised April 22, 2025.
+Manuscript publicized June 24, 2025.
+yDivision of Information Science, Nara Institute of Science and
+Technology, Ikoma-shi, 630–0192 Japan.
+yySchool of Information Science and Engineering, Yunnan Uni-
+versity, Kunming, 650091, China.
+This paper was presented at the T welfth International Sympo-
+sium on Computing and Networking. This work was supported by
+JSPS KAKENHI Grant Numbers JP22H00515, JP22K21280, and
+JST-ALCA-Next Program Grant Number JPMJAN23F4, Japan.
+a) E-mail: cheng.xu.db8@naist.ac.jp
+b) E-mail: kan.yirong@is.naist.jp (Corresponding author)
+c) E-mail: rzhang@is.naist.jp (Corresponding author)
+DOI: 10.1587/transinf.2025PAP0003
+techniques tailored to Transformer-based architectures are
+essential for practical applications.
+Model quantization has been extensively studied as a
+technique for reducing the computational complexity to ac-
+celerate DNN inference on edge devices. Existing quantiza-
+tion methods can be broadly
+
+====================================================================================================
+12_AxCore A qantization-Aware Approximate GEMM Unit for LLM - Micro25.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\AxCore A qantization-Aware Approximate GEMM Unit for LLM - Micro25.pdf
+PAGES: 16
+--- PAGE 1 ---
+. 
+. 
+Latest updates: hps://dl.acm.org/doi/10.1145/3725843.3756094
+. 
+. 
+RESEARCH-ARTICLE
+AxCore: A antization-Aware Approximate GEMM Unit for LLM
+Inference
+JIAXIANG ZOU, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+YONGHAO CHEN, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+XINGYU CHEN, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+CHENXI XU, The Hong Kong University of Science and Technology (Guangzhou), Guangzhou,
+Guangdong, China
+. 
+XINYU CHEN, The Hong Kong University of Science and Technology (Guangzhou),
+Guangzhou, Guangdong, China
+. 
+. 
+. 
+Open Access Support provided by:
+. 
+The Hong Kong University of Science and Technology (Guangzhou)
+. 
+PDF Download
+3725843.3756094.pdf
+30 December 2025
+Total Citations: 0
+Total Downloads: 3408
+. 
+. 
+. 
+. 
+Published: 18 October 2025
+. 
+. 
+Citation in BibTeX format
+. 
+. 
+MICRO 2025: 58th IEEE/ACM
+International Symposium on
+Microarchitecture
+October 18 - 22, 2025
+Seoul, Korea
+. 
+. 
+Conference Sponsors:
+SIGMICRO
+MICRO '25: Proceedings of the 58th IEEE/ACM International Symposium on Microarchitecture (October 2025)
+hps://doi.org/10.1145/3725843.3756094
+ISBN: 9798400715730
+.
+
+
+--- PAGE 2 ---
+AxCore: A Quantization-Aware Approximate GEMM Unit for LLM
+Inference
+Jiaxiang Zou∗
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+jiaxiangzou@std.uestc.edu.cn
+Yonghao Chen∗
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+ychen433@connect.hkust-gz.edu.cn
+Xingyu Chen
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+xchen740@connect.hkust-gz.edu.cn
+Chenxi Xu
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+cxu930@connect.hkust-gz.edu.cn
+Xinyu Chen†
+The Hong Kong University of Science
+and Technology (Guangzhou)
+Guangzhou, China
+xinyuchen@hkust-gz.edu.cn
+Abstract
+Large Language Models (LLMs) have become foundational to mod-
+ern natural language processing, yet their immense computational
+and memory demands pose major obstacles for efficient infer-
+ence. Transformer-based LLMs rely heavily on floating-point gen-
+eral matrix-matrix multiplication (FP-GEMM), which dominates
+both compute and bandwidth. In this paper, we introduce Ax-
+Core, a quantization-aware, approximate GEMM unit that combines
+weight-only quantization with floating-point multiplication approx-
+imation (FPMA) to deliver highly efficient and accurate LLM infer-
+ence. Unlike traditional GEMM units, AxCore eliminates multipliers
+entirely, replacing them with low-bit integer additions in a novel
+systolic array. AxCore features several key innovations: (1) a mixed-
+precision FPMA-based processing element that supports direct com-
+putation on compressed weights and high-precision activations;
+(2) a lightweight accuracy preservation strategy, including sub-
+normal number handling, error compensation, and format-aware
+quantization; and (3) a set of systolic array optimizations, including
+shared correction and normalization logic. Evaluations on open-
+source LLMs show that AxCore achieves up to 6.3×-12.5× higher
+compute density than conventional FP GEMM units. Compared
+to state-of-the-art INT4-based accelerato
+
+====================================================================================================
+13_CXL-SpeckKV - FPGA26.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\CXL-SpeckKV - FPGA26.pdf
+PAGES: 11
+--- PAGE 1 ---
+CXL-SpecKV: A Disaggregated FPGA Speculative KV-Cache for
+Datacenter LLM Serving
+Dong Liu
+Yale University
+New Haven, Connecticut, USA
+dong.liu.dl2367@yale.edu
+Yanxuan Yu
+Columbia University
+New York, New York, USA
+yy3523@columbia.edu
+Abstract
+Large Language Models (LLMs) have revolutionized natural lan-
+guage processing tasks, but their deployment in datacenter envi-
+ronments faces significant challenges due to the massive memory
+requirements of key-value (KV) caches. During the autoregressive
+decoding process, KV caches consume substantial GPU memory,
+limiting batch sizes and overall system throughput. To address
+these challenges, we proposeCXL-SpecKV, a novel disaggregated
+KV-cache architecture that leverages Compute Express Link (CXL)
+interconnects and FPGA accelerators to enable efficient speculative
+execution and memory disaggregation. Our approach introduces
+three key innovations: (i) a CXL-based memory disaggregation
+framework that offloads KV-caches to remote FPGA memory with
+low latency, (ii) a speculative KV-cache prefetching mechanism that
+predicts and preloads future tokens’ cache entries, and (iii) an FPGA-
+accelerated KV-cache compression and decompression engine that
+reduces memory bandwidth requirements by up to 4×. When eval-
+uated on state-of-the-art LLM models, CXL-SpecKV achieves up
+to 3.2× higher throughput compared to GPU-only baselines, while
+reducing memory costs by 2.8× and maintaining accuracy. Our sys-
+tem demonstrates that intelligent memory disaggregation combined
+with speculative execution can effectively address the memory wall
+challenge in large-scale LLM serving. Our code implementation has
+been open-sourced at https://github.com/FastLM/CXL-SpecKV.
+CCS Concepts
+•Hardware;•Computer systems organization → Architec-
+tures;•Networks;
+Keywords
+CXL, FPGA, LLM, KV-cache, memory disaggregation, speculative
+execution, deep learning
+ACM Reference Format:
+Dong Liu and Yanxuan Yu. 2026. CXL-SpecKV: A Disaggregated FPGA
+Speculative KV-Cache for Datacenter LLM Serving. InProceedings of the
+2026 ACM/SIGDA International Symposium on Field Programmable Gate
+Arrays (FPGA ’26), February 22–24, 2026, Seaside, CA, USA.ACM, New York,
+NY, USA, 11 pages. https://doi.org/10.1145/3748173.3779188
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+FPGA ’26, Seaside, CA, USA
+©2026 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-2079-6/2026/02
+https://doi.org/10.1145/3748173.3779188
+1 Introduction
+Large Language Models (LLMs) have emerged as the cornerstone
+of modern AI applications [7, 33, 46]. However, serving them effi-
+ciently faces significant challenges due to massive memory require-
+ments of key-value (KV) caches. During inference, transformer-
+based LLMs store intermediate key and value tensors from all previ-
+ous tokens. For a typical LLaMA-2 70B model serving 2048 tokens
+with batch size 32, the KV-cache alone consumes 640GB—far ex-
+ceeding GPU capacity [19].
+Traditional approaches include memory offloading [ 41], KV-
+cache compression [ 16], and speculative decoding [ 20], but suf-
+fer from limited bandwidth, accuracy degradation, or persistent
+memory constraints.
+Recent advances in Compute Express Link (CXL) [11] and FPGA
+architectures [12] present new opportunities. CXL provides high-
+bandwidth, low-latency cache-coherent memory sharing, while
+
+====================================================================================================
+14_FlightLLM Efficient LLM Inference with a Complete Mapping Flow on FPGAs - FPGA25.txt
+FILE: D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\references\LLM-FPGA\FlightLLM Efficient LLM Inference with a Complete Mapping Flow on FPGAs - FPGA25.pdf
+PAGES: 12
+--- PAGE 1 ---
+FlightLLM: Efficient Large Language Model Inference
+with a Complete Mapping Flow on FPGAs
+Shulin Zeng∗
+Tsinghua University
+Infinigence-AI
+Jun Liu∗
+Shanghai Jiao Tong University
+Infinigence-AI
+Guohao Dai†
+Shanghai Jiao Tong University
+Infinigence-AI
+Xinhao Yang
+Tsinghua University
+Infinigence-AI
+Tianyu Fu
+Tsinghua University
+Infinigence-AI
+Hongyi Wang
+Tsinghua University
+Infinigence-AI
+Wenheng Ma
+Tsinghua University
+Hanbo Sun
+Tsinghua University
+Shiyao Li
+Tsinghua University
+Infinigence-AI
+Zixiao Huang
+Tsinghua University
+Yadong Dai
+Infinigence-AI
+Jintao Li
+Infinigence-AI
+Zehao Wang
+Infinigence-AI
+Ruoyu Zhang
+Infinigence-AI
+Kairui Wen
+Infinigence-AI
+Xuefei Ning
+Tsinghua University
+Yu Wang†
+Tsinghua University
+ABSTRACT
+Transformer-based Large Language Models (LLMs) have made
+a significant impact on various domains. However, LLMs’ effi-
+ciency suffers from both heavy computation and memory over-
+heads. Compression techniques like sparsification and quantization
+are commonly used to mitigate the gap between LLM’s computa-
+tion/memory overheads and hardware capacity. However, existing
+GPU and transformer-based accelerators cannot efficiently process
+compressed LLMs, due to the following unresolved challenges: low
+computational efficiency, underutilized memory bandwidth, and
+large compilation overheads.
+This paper proposes FlightLLM, enabling efficient LLMs infer-
+ence with a complete mapping flow on FPGAs. In FlightLLM, we
+highlight an innovative solution that the computation and mem-
+ory overhead of LLMs can be solved by utilizing FPGA-specific
+resources (e.g., DSP48 and heterogeneous memory hierarchy). We
+propose a configurable sparse DSP chain to support different spar-
+sity patterns with high computation efficiency. Second, we propose
+an always-on-chip decode scheme to boost memory bandwidth
+with mixed-precision support. Finally, to make FlightLLM available
+for real-world LLMs, we propose a length adaptive compilation
+∗Both authors contributed equally to this research.
+†Corresponding authors. Email: daiguohao@sjtu.edu.cn, yu-wang@tsinghua.edu.cn
+This work is licensed under a Creative Commons Attribution
+International 4.0 License.
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA
+© 2024 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-0418-5/24/03
+https://doi.org/10.1145/3626202.3637562
+method to reduce the compilation overhead. Implemented on the
+Xilinx Alveo U280 FPGA, FlightLLM achieves 6.0× higher energy
+efficiency and 1.8× better cost efficiency against commercial GPUs
+(e.g., NVIDIA V100S) on modern LLMs (e.g., LLaMA2-7B) using
+vLLM and SmoothQuant under the batch size of one. FlightLLM
+beats NVIDIA A100 GPU with 1.2× higher throughput using the
+latest Versal VHK158 FPGA.
+CCS CONCEPTS
+• Hardware→ Hardware accelerators; • Computer systems
+organization→ Reconfigurable computing.
+KEYWORDS
+Large Language Model, FPGA, Complete Mapping Flow
+ACM Reference Format:
+Shulin Zeng, Jun Liu, Guohao Dai, Xinhao Yang, Tianyu Fu, Hongyi Wang,
+Wenheng Ma, Hanbo Sun, Shiyao Li, Zixiao Huang, Yadong Dai, Jintao
+Li, Zehao Wang, Ruoyu Zhang, Kairui Wen, Xuefei Ning, and Yu Wang.
+2024. FlightLLM: Efficient Large Language Model Inference with a Com-
+plete Mapping Flow on FPGAs. In Proceedings of the 2024 ACM/SIGDA
+International Symposium on Field Programmable 
+
+====================================================================================================
+15_2026 Adana Accelerating Large Language Models via Adaptive Nonuniform Asymmetric Quantizat.txt
+FILE: D:\LiuZhiWei\Documents\xwechat_files\wxid_2oq495x45qlm12_1c59\msg\file\2026-06\2026 Adana Accelerating Large Language Models via Adaptive Nonuniform Asymmetric Quantization.pdf
+PAGES: 7
+--- PAGE 1 ---
+Adana: Accelerating Large Language Models via Adaptive
+Nonuniform Asymmetric Quantization
+Xinkuang Geng1, Siting Liu2∗, Hui Wang1, Leibo Liu3, Jie Han4, Honglan Jiang1∗
+1 School of Integrated Circuits, Shanghai Jiao Tong University, Shanghai, China
+2 School of Information Science and Technology, ShanghaiTech University, Shanghai, China
+3 School of Integrated Circuits, Tsinghua University, Beijing, China
+4 Department of Electrical and Computer Engineering, University of Alberta, Alberta, Canada
+xinkuang@sjtu.edu.cn, liust@shanghaitech.edu.cn, ihuiwang@sjtu.edu.cn, liulb@tsinghua.edu.cn, jhan8@ualberta.ca, honglan@sjtu.edu.cn
+Abstract
+We propose Adana, a hardware-software co-design that enables effi-
+cient low-bit group-wise quantization for LLMs based on the adaptive
+nonuniform asymmetric numeric type. First, Adana introduces a novel
+numeric type that precisely captures the nonuniformity and asymmetry
+of data within small groups. In addition, an approximate metric for quan-
+tization error is proposed to facilitate efficient implementation of online
+adaptive activation quantization. Finally, a dedicated LLM acceleration
+microarchitecture is developed for Adana. Compared to state-of-the-art
+designs, Adana achieves 1.42×–2.10× speedups and 18.9%–48.5% power
+savings on LLMs, while maintaining superior accuracy.
+Keywords
+large language model, low-bit quantization, group-wise quantization,
+adaptive numeric type, accelerator
+ACM Reference Format:
+Xinkuang Geng1, Siting Liu2∗, Hui Wang1, Leibo Liu3, Jie Han4, Honglan Jiang1∗.
+2026. Adana: Accelerating Large Language Models via Adaptive Nonuniform
+Asymmetric Quantization. In 63rd ACM/IEEE Design Automation Conference
+(DAC ’26), July 26–29, 2026, Long Beach, CA, USA. ACM, New York, NY, USA,
+7 pages. https://doi.org/10.1145/3770743.3804291
+1 Introduction
+Large Language Models (LLMs) such as OPT [40], LLaMA [9, 30, 31] and
+Qwen [35] have achieved unprecedented success across a wide range of
+natural language processing tasks [2, 4, 22, 24, 39]. In general, increas-
+ing parameter sizes leads to stronger model capability [15]. However, a
+large model imposes substantial demands on memory and computation,
+which becomes especially challenging on edge or portable devices with
+limited storage and power budgets [8, 18, 25, 33]. As a structured com-
+pression technique, quantization proportionally reduces memory usage
+[21]. In addition, when both weights and activations are quantized,
+most computations during inference can be performed in low-bit nu-
+meric formats. Since activation–activation matrix multiplications also
+occur during LLM inference [32], employing unified low-bit hardware
+inevitably requires quantizing activations as well, underscoring the
+importance of online quantization [7, 10, 17, 34]. Given the long-tailed
+data distribution in LLMs [5, 6, 38], group-wise quantization assigns a
+scaling factor to each group, effectively isolating outliers and prevent-
+ing them from degrading the quantization resolution of the remaining
+∗Corresponding authors: Siting Liu, Honglan Jiang.
+This work was supported in part by the National Natural Science Foundation of China under
+Grant 62374108 and in part by the Natural Sciences and Engineering Research Council of
+Canada under Grant RES0048688, Grant RES0051374

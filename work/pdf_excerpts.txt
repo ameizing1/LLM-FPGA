@@ -1,0 +1,910 @@
+
+====================================================================================================
+TRACI-Network Acceleration of Input-Dynamic Communication for Large-Scale Deep Learning Recommendation Model(1).pdf
+
+pages 14
+
+
+--- PAGE 1 ---
+TRACI: Network Acceleration of Input-Dynamic Communication
+for Large-Scale Deep Learning Recommendation Model
+Guyue Huang
+University of California, Santa
+Barbara
+Santa Clara, USA
+guyue@ucsb.edu
+Hao Li
+University of Minnesota
+Minneapolis, USA
+li003703@umn.edu
+Le Qin
+Hong Kong University of Science and
+Technology (Guangzhou)
+Guangzhou, China
+lqin674@connect.hkust-gz.edu.cn
+Jiayi Huang
+Hong Kong University of Science and
+Technology (Guangzhou)
+Guangzhou, China
+hjy@hkust-gz.edu.cn
+Yangwook Kang
+Samsung Electronics
+San Jose, USA
+yangwook.k@samsung.com
+Yufei Ding
+University of California, San Diego
+San Diego, USA
+yufeiding@ucsd.edu
+Yuan Xie
+Hong Kong University of Science and
+Technology
+Hong Kong, China
+yuanxie@ust.hk
+Abstract
+Large-scale deep learning recommendation models (DLRMs) rely
+on embedding layers with terabyte-scale embedding tables, which
+present significant challenges to memory capacity. In addition,
+these embedding layers exhibit sparse and random data access
+patterns, which demand high memory bandwidth. Multi-GPU sys-
+tems provide a promising solution, allowing for the scaling of both
+memory and aggregated bandwidth. However, network commu-
+nication bandwidth becomes a bottleneck for multi-GPU DLRM
+systems. Overcoming the communication bottleneck is crucial to
+unlocking the potential of multi-GPU systems for efficient and
+high-performance DLRM training.
+This paper introduces TRACI, an in-network acceleration ar-
+chitecture designed to optimize the communication operator in
+embedding layers: Aggregation. While in-network acceleration has
+proven successful for the All-Reduce communication collective, ex-
+isting solutions do not directly apply to Aggregation due to two key
+challenges. Firstly, existing multi-GPU shared memory operations
+are designed for point-to-point communication and do not allow
+the network to proactively optimize communication. Secondly, in
+Aggregation, data transfer patterns are dynamic and dependent on
+input, demanding the network to dynamically discover and exploit
+message connections on-the-fly. To address these challenges, we
+propose a solution that involves a novel network transaction and
+switch hardware design. We introduce a new network transaction
+that augments messages with input reuse and output reuse iden-
+tifications, and can empower the network to proactively reduce
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+ISCA ’25, Tokyo, Japan
+© 2025 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-1261-6/25/06
+https://doi.org/10.1145/3695053.3731105
+data transfers. Additionally, we present an in-switch cache and a
+reduction table structure, effectively harnessing input and output
+reuse opportunities. Using these innovations, TRACI achieves up
+to 4.04× and an average of 3.12× speedup to Aggregation for a
+64-GPU system.
+CCS Concepts
+• Networks→ Network architectures; • Computer systems
+organization→ Distributed architectures.
+Keywords
+Deep Learning Recommendation System, GPU
+ACM Reference Format:
+Guyue Huang, Hao Li, Le Qin, Jiayi Huang, Yangwook Kang, Yufei Ding,
+and Yuan Xie. 2025. TRACI: Network Acceleration of Input-Dynamic Com-
+munication for Large-Scale Deep Learning Recommendation Model. In
+Proceedings of the 52nd Annual International Symposium on Computer Ar-
+chitecture (ISCA ’25), June 21–25, 2025, Tokyo, Japan. ACM, New York, NY,
+USA, 14 pages. https://doi.org/10.1145/3695053.3731105
+1 Introduction
+Deep learning recommendation systems (DLRMs) are widely ap-
+plied in web applications to rank and personalize ads [7, 8, 11, 13,
+14, 40, 44]. Large-scale DLRMs consume a significant fraction of
+datacenter cycles [13, 18, 19, 34] and thus are very important to
+optimize.
+The key components inside DLRM are the embedding layers,
+which use learned embedding tables [35] to encode customers and
+product items. To efficiently run embedding layers, we need both
+large memory capacity and high memory bandwidth, due to the
+terabyte (TB) scale model size [1, 33] and the random-access pattern
+of embedding lookup. Although CPU-only systems [2, 16, 43] and
+CPU-GPU heterogeneous systems [4, 12, 25] have been proposed in
+1880
+
+
+--- PAGE 2 ---
+ISCA ’25, June 21–25, 2025, Tokyo, Japan Huang et al.
+GPU 1
+GPU 2
+GPU 3
+X1
+X2
+X3
+Y
+Y
+Y
+(a) All-Reduce
+GPU 1
+GPU 2
+GPU 3
+X1
+X2
+X3
+Y1
+Y2
+Y3
+Input dependent pattern (b) Aggregation
+Figure 1: Comparison of communication pattern in All-
+Reduce and Aggregation.
+the past, currently the most promising way to meet the demand for
+both memory capacity and memory bandwidth is using multi-GPU
+systems [2, 33, 36, 39]. Unfortunately, multi-GPU DLRM systems are
+challenged by excessive cross-GPU communication that dominates
+execution time (Section 2.2).
+Overcoming the communication bottleneck is crucial to unleash-
+ing the potentials of multi-GPU systems for DLRM. The commu-
+nication operator in the embedding layer is Aggregation, which
+gathers embedding entries from the embedding table and accumu-
+lates them in the output features, as shown in Figure 1b. Because
+the embedding table and the output features are partitioned among
+GPUs, the data access in Aggregation involves a significant amount
+of cross-GPU network communication.
+To accelerate Aggregation, our key insight is the presence of
+input reuse and output reuse. On the one hand, if the same input
+vector is added to many output vectors on other GPUs, input reuse
+means we should avoid repeated injecting the same input to the
+network to reduce traffic. On the other hand, if provided that many
+input vectors will be reduced to the same output vector, output
+reuse means we should reduce them ahead of time so that only the
+reduction result needs to be transmitted to the GPU holding the
+output, leading to reduced network traffic as well. The two types
+of reuse present significant opportunities of reducing the network
+traffic: harnessing either reuse type can theoretically provide larger
+than 3× bi-sectional traffic reduction in Aggregation, as elaborated
+in Section 2.3.
+However, harnessing both input reuse and output reuse in multi-
+GPU systems for Aggregation is challenging, and has never been
+solved in previous approaches (Section 2.4).The first challenge comes
+from the limitations of existing cross-GPU memory operations. Ex-
+isting memory operations in the multi-GPU shared memory archi-
+tecture are either load-style or store-style operations that employ
+point-to-point network transactions. They do not allow the net-
+work to proactively reuse input or output, both semantically and
+at the network transaction level. The second challenge comes from
+the input-dependent nature of Aggregation. To exploit input reuse
+and output reuse, the system needs to have a good knowledge of
+the connections between individual network messages. However,
+in Aggregation, the data transfer pattern is input-dependent and
+always changing. We need to design a mechanism to dynamically
+discover and exploit the two types of reuse.
+To tackle these challenges, we introduce TRACI, the first in-
+network acceleration architecture for Aggregation. TRACI is built
+on three key methods.Firstly, we propose a new multi-GPU shared
+Bottom MLPEMB 0EMB 1EMB X
+Categorical Feature 0-X
+…
+Feature InteractionTop MLPPrediction
+Numerical Feature
+…
+EMT
+out_gradout_feat
+…
+EMT_grad
+ForwardBackward
+vocab_sizevocab_size
+batch_sizebatch_sizeemb_dimemb_dim
+AggregationAggregation
+in_cat(ids of EMT entries to gather for each output feature)
+Figure 2: The architecture of DLRM and the operation per-
+formed in an embedding layer.
+memory operation called𝐺𝑒𝑡𝑅𝑒𝑑𝑢𝑐𝑒 , as the software-hardware in-
+terface that semantically allows in-network acceleration. In addi-
+tion, the𝐺𝑒𝑡𝑅𝑒𝑑𝑢𝑐𝑒 network transaction makes a network message
+carry both the input address and the reduction output address of
+a data transfer, which is essential for the network to dynamically
+discover input and output reuse between messages. Secondly, we
+propose an in-switch caching mechanism to harness input reuse
+dynamically. The key insight is to cache data from messages that
+previously travel through a network switch, and make the switch
+directly respond upon a cache hit, to avoid repeatedly injecting the
+same input to the network. Thirdly, we propose an in-network
+reduction mechanism to harness output reuse dynamically. On top
+of the existing in-network reduction methods that leverage a re-
+duction table, our key enhancement is to use a counter mechanism
+that dynamically increments when seeing a request and decrements
+when receiving a response. This helps us tackle the dynamic number
+of messages to reduce.
+We comprehensively evaluate the performance of TRACI. In a
+64-GPU system, TRACI can bring an average of 3.12× speedup to
+Aggregation in asynchronous recommendation model processing,
+and average 2.05× and 2.29× speedup in synchronized processing
+with small and large batch size respectively. Ablation studies show
+that both reduction and caching contribute significantly to the final
+speedup, and combining them is necessary for our system to adapt
+to different system scales and dataset characteristics.
+This paper makes the following contributions:
+• Motivated by the input reu
+
+
+--- PAGE 3 ---
+TRACI: Network Acceleration of Input-Dynamic Communication for Large-Scale Deep Learning Recommendation Model ISCA ’25, June 21–25, 2025, Tokyo, Japan
+0%10%20%30%40%50%60%70%80%90%100%
+DLRMWide & Deep
+Percentage of Exposed Aggregation Time (%)
+A100 1:1 (312TFlops,300GBps)A100 2:1 (624TFlops,300GBps)A100 Eth100gb(312TFlops, 100Gbps)A100 Eth10gb(312TFlops, 10Gbps)
+Figure 3: Percentage of end-to-end time spent on exposed
+communication of EMB in DLRM training on 128 A100
+GPUs (16 node, 8 GPU/node). The legend shows (computation
+throughput, network bandwidth) per GPU. In four configura-
+tions, the ratio of the network bandwidth and computation
+throughput decreases.
+an embedding vector. Each embedding layer contains an embed-
+ding table (EMT). Define the dimension of embedding feature as
+emb_dim, and the number of embeddings in the table as vocabulary
+size (vocab_size), an EMT is a matrix of size[vocab_size, emb_dim].
+Define the output of embedding operation as matrix out_feat, the
+number of input samples as batch_size, out_feat is a matrix of size
+[batch_size, emb_dim]. EMB is an Aggregation operation, where
+the EMT is input and out_feat is output. The input categorical
+features to this layer, defined as in_cat, contain the data transfer
+pattern, i.e. which embedding entries are accumulated to each out-
+put feature. The backward of EMB is another Aggregation, whose
+input is the gradients of the output feature (defined as out_grad,
+the same shape as out_feat), and the output is the gradients of
+EMT (defined as EMT_grad) with the same shape as EMT. The data
+access pattern is the inverse of that in the forward, and can be
+calculated from in_cat.
+2.2 Communication Bottleneck in DLRM
+Systems
+The terabyte scale size of the embedding tables (EMTs) in DLRM
+models exceeds the memory capacity of a single GPU. Therefore,
+state-of-the-art DLRM systems such as the TorchRec [33] need to
+partition EMTs to multiple GPUs. Meanwhile, the input features
+are also distributed among all GPUs. This means that a significant
+amount of EMT accesses in Aggregation, shown in Figure 2, happen
+across GPUs. Figure 3 shows the fraction of the Aggregation time
+in the end-to-end DLRM training. The evaluation is performed on
+ASTRA-SIM [38], a distributed training simulation framework. The
+four different settings in Figure 3 demonstrate different ratios of
+computation FLOPS to the network bandwidth. The results show
+that in DLRM systems, the cross-GPU communication for Aggre-
+gation is a dominating factor of the end-to-end execution time,
+and as the bandwidth-to-computation ratio decreases, Aggregation
+becomes more of a bottleneck.
+2.3 Input Reuse and output reuse in
+Aggregation
+In Aggregation, the input reuse and output reuse are the two types
+of data reuse among data transfers that can be leveraged to reduce
+the inter-GPU network traffic. As Figure 4a indicates, the input
+Table 1: Reuse factor and the theoretical reduction factor of
+bi-sectional traffic reduction by leveraging reuse.
+Facebook
+Synthetic
+LastFM
+(Web-Review)
+Terabyte
+(CTR)
+Avg. output reuse degree 15.8 95.4 1
+Avg. input reuse degree 6.9 94.7 100.3
+Bi-sec traffic reduction from output reuse1.27 3.16 1
+Bi-sec traffic reduction from input reuse1.10 3.14 3.26
+refers to the array being read, which is the EMT in DLRM. The
+output refers to the array storing the reduction results, which is the
+output feature (out_feat in Figure 2). As shown in Figure 4b, input
+reuse means that a vector in the input is reduced to multiple vectors
+in the output. Input reuse can be exploited as follows: instead of
+repeatedly sending identical copies of the same data, we push only
+one copy of the data into the network, and make the network multi-
+cast the data autonomously and efficiently. As a symmetric idea,
+output reuse means that a vector in the output is the reduction of
+multiple vectors in the input. The way to exploit output reuse is that,
+since only the reduction result matters, the network can proactively
+reduce the data and only transmit the reduction result. Combining
+the two types of reuse, we can reduce the messages pushed into
+and popped from the network, thus effectively accelerating the
+Aggregation operation.
+Input reuse and output reuse opportunities are both significant
+in real applications. Table 1 shows the theoretical reduction of bi-
+section traffic if we leverage input and output reuse. We assume a
+system of 256 GPUs connected in a 2-tapered fat tree topology, and
+assume the accessed entries and samples are randomly distributed
+among all GPUs. The input/output reuse degree refers to the number
+of data transfers that share an input/output. We can observe that
+exploiting output and input reuse can each provide up to 3.16× and
+3.26× speedup.
+2.4 Constraints of Previous DLRM Acceleration
+Methods
+Systems that exploit data reuse but fail to leverage input
+and output reuse simultaneously: Many prior papers proposed
+hardware or system designs to harness the input or output reuse.
+The major diffe
+
+
+--- PAGE 13 ---
+TRACI: Network Acceleration of Input-Dynamic Communication for Large-Scale Deep Learning Recommendation Model ISCA ’25, June 21–25, 2025, Tokyo, Japan
+References
+[1] Bilge Acun, Matthew Murphy, Xiaodong Wang, Jade Nie, Carole-Jean Wu, and
+Kim Hazelwood. 2021. Understanding training efficiency of deep learning rec-
+ommendation models at scale. In 2021 IEEE International Symposium on High-
+Performance Computer Architecture (HPCA). IEEE, 802–814.
+[2] Muhammad Adnan, Yassaman Ebrahimzadeh Maboud, Divya Mahajan, and
+Prashant J Nair. 2021. Accelerating recommendation system training by leverag-
+ing popular choices. Proceedings of the VLDB Endowment 15, 1 (2021), 127–140.
+[3] Niket Agarwal, Tushar Krishna, Li-Shiuan Peh, and Niraj K Jha. 2009. GARNET:
+A detailed on-chip network model inside a full-system simulator. In Performance
+Analysis of Systems and Software, 2009. ISPASS 2009. IEEE International Symposium
+on. IEEE, 33–42.
+[4] Ehsan K Ardestani, Changkyu Kim, Seung Jae Lee, Luoshang Pan, Valmiki Ram-
+persad, Jens Axboe, Banit Agrawal, Fuxun Yu, Ansha Yu, Trung Le, et al. 2021.
+Supporting Massive DLRM Inference Through Software Defined Memory. arXiv
+preprint arXiv:2110.11489 (2021).
+[5] Ge Chen, Gaoxiong Zeng, and Li Chen. 2021. P4com: In-network computation
+with programmable switches. arXiv preprint arXiv:2107.13694 (2021).
+[6] Li Chen, Ge Chen, Justinas Lingys, and Kai Chen. 2018. Programmable switch as
+a parallel computing device. arXiv preprint arXiv:1803.01491 (2018).
+[7] Heng-Tze Cheng, Levent Koc, Jeremiah Harmsen, Tal Shaked, Tushar Chandra,
+Hrishi Aradhye, Glen Anderson, Greg Corrado, Wei Chai, Mustafa Ispir, et al.
+2016. Wide & deep learning for recommender systems. In Proceedings of the 1st
+workshop on deep learning for recommender systems . 7–10.
+[8] Paul Covington, Jay Adams, and Emre Sargin. 2016. Deep neural networks
+for youtube recommendations. In Proceedings of the 10th ACM conference on
+recommender systems. 191–198.
+[9] Daniele De Sensi, Salvatore Di Girolamo, Saleh Ashkboos, Shigang Li, and Torsten
+Hoefler. 2021. Flare: Flexible in-network allreduce. In Proceedings of the Inter-
+national Conference for High Performance Computing, Networking, Storage and
+Analysis. 1–16.
+[10] Nadeen Gebara, Manya Ghobadi, and Paolo Costa. 2021. In-network aggregation
+for shared machine learning clusters.Proceedings of Machine Learning and Systems
+3 (2021), 829–844.
+[11] Carlos A Gomez-Uribe and Neil Hunt. 2015. The netflix recommender system:
+Algorithms, business value, and innovation. ACM Transactions on Management
+Information Systems (TMIS) 6, 4 (2015), 1–19.
+[12] Huifeng Guo, Wei Guo, Yong Gao, Ruiming Tang, Xiuqiang He, and Wenzhi Liu.
+2021. Scalefreectr: Mixcache-based distributed training system for ctr models
+with huge embedding table. In Proceedings of the 44th International ACM SIGIR
+Conference on Research and Development in Information Retrieval . 1269–1278.
+[13] Udit Gupta, Carole-Jean Wu, Xiaodong Wang, Maxim Naumov, Brandon Reagen,
+David Brooks, Bradford Cottel, Kim Hazelwood, Mark Hempstead, Bill Jia, et al.
+2020. The architectural implications of facebook’s dnn-based personalized recom-
+mendation. In 2020 IEEE International Symposium on High Performance Computer
+Architecture (HPCA). IEEE, 488–501.
+[14] Kim Hazelwood, Sarah Bird, David Brooks, Soumith Chintala, Utku Diril, Dmytro
+Dzhulgakov, Mohamed Fawzy, Bill Jia, Yangqing Jia, Aditya Kalro, et al. 2018.
+Applied machine learning at facebook: A datacenter infrastructure perspective.
+In 2018 IEEE International Symposium on High Performance Computer Architecture
+(HPCA). IEEE, 620–629.
+[15] Alexander Ishii and Ryan Wells. 2022. The Nvlink-Network Switch: Nvidia’s
+Switch Chip for High Communication-Bandwidth Superpods. In 2022 IEEE Hot
+Chips 34 Symposium (HCS) . IEEE Computer Society, 1–23.
+[16] Biye Jiang, Chao Deng, Huimin Yi, Zelin Hu, Guorui Zhou, Yang Zheng, Sui
+Huang, Xinyang Guo, Dongyue Wang, Yue Song, Liqin Zhao, Zhi Wang, Peng
+Sun, Yu Zhang, Di Zhang, Jinhui Li, Jian Xu, Xiaoqiang Zhu, and Kun Gai. 2019.
+XDL: an industrial deep learning framework for high-dimensional sparse data.
+In Proceedings of the 1st International Workshop on Deep Learning Practice for
+High-Dimensional Sparse Data. 1–9.
+[17] Xin Jin, Xiaozhou Li, Haoyu Zhang, Robert Soulé, Jeongkeun Lee, Nate Foster,
+Changhoon Kim, and Ion Stoica. 2017. NetCache: Balancing Key-Value Stores with
+Fast In-Network Caching. In Proceedings of the 26th Symposium on Operating
+Systems Principles (Shanghai, China) (SOSP ’17) . Association for Computing
+Machinery, New York, NY, USA, 121–136. doi:10.1145/3132747.3132764
+[18] Norm Jouppi, George Kurian, Sheng Li, Peter Ma, Rahul Nagarajan, Lifeng Nai,
+Nishant Patil, Suvinay Subramanian, Andy Swing, Brian Towles, et al . 2023.
+Tpu v4: An optically reconfigurable supercomputer for machine learning with
+hardware support for embeddings. In Proceedings of the 50th Annual International
+Symposium on Computer Architecture. 1–14.
+[19] Norman P Jouppi, Doe H
+
+
+--- PAGE 14 ---
+ISCA ’25, June 21–25, 2025, Tokyo, Japan Huang et al.
+[39] Geet Sethi, Bilge Acun, Niket Agarwal, Christos Kozyrakis, Caroline Trippel, and
+Carole-Jean Wu. 2022. RecShard: statistical feature-based memory optimization
+for industry-scale neural recommendation. In Proceedings of the 27th ACM In-
+ternational Conference on Architectural Support for Programming Languages and
+Operating Systems. 344–358.
+[40] Brent Smith and Greg Linden. 2017. Two decades of recommender systems at
+Amazon. com. Ieee internet computing 21, 3 (2017), 12–18.
+[41] Muhammad Tirmazi, Ran Ben Basat, Jiaqi Gao, and Minlan Yu. 2020. Cheetah:
+Accelerating database queries with switch pruning. In Proceedings of the 2020
+ACM SIGMOD International Conference on Management of Data . 2407–2422.
+[42] Qing Wang, Youyou Lu, Erci Xu, Junru Li, Youmin Chen, and Jiwu Shu. 2021.
+Concordia: Distributed Shared Memory with In-Network Cache Coherence. In
+19th USENIX Conference on File and Storage Technologies (FAST 21) . 277–292.
+[43] Weijie Zhao, Jingyuan Zhang, Deping Xie, Yulei Qian, Ronglai Jia, and Ping Li.
+2019. Aibox: Ctr prediction model training on a single node. In Proceedings of the
+28th ACM International Conference on Information and Knowledge Management .
+319–328.
+[44] Guorui Zhou, Na Mou, Ying Fan, Qi Pi, Weijie Bian, Chang Zhou, Xiaoqiang
+Zhu, and Kun Gai. 2019. Deep interest evolution network for click-through rate
+prediction. In Proceedings of the AAAI conference on artificial intelligence , Vol. 33.
+5941–5948.
+1893
+
+
+====================================================================================================
+FlightLLM Efficient LLM Inference with a Complete Mapping Flow on FPGAs - FPGA25.pdf
+
+pages 12
+
+
+--- PAGE 1 ---
+FlightLLM: Efficient Large Language Model Inference
+with a Complete Mapping Flow on FPGAs
+Shulin Zeng∗
+Tsinghua University
+Infinigence-AI
+Jun Liu∗
+Shanghai Jiao Tong University
+Infinigence-AI
+Guohao Dai†
+Shanghai Jiao Tong University
+Infinigence-AI
+Xinhao Yang
+Tsinghua University
+Infinigence-AI
+Tianyu Fu
+Tsinghua University
+Infinigence-AI
+Hongyi Wang
+Tsinghua University
+Infinigence-AI
+Wenheng Ma
+Tsinghua University
+Hanbo Sun
+Tsinghua University
+Shiyao Li
+Tsinghua University
+Infinigence-AI
+Zixiao Huang
+Tsinghua University
+Yadong Dai
+Infinigence-AI
+Jintao Li
+Infinigence-AI
+Zehao Wang
+Infinigence-AI
+Ruoyu Zhang
+Infinigence-AI
+Kairui Wen
+Infinigence-AI
+Xuefei Ning
+Tsinghua University
+Yu Wang†
+Tsinghua University
+ABSTRACT
+Transformer-based Large Language Models (LLMs) have made
+a significant impact on various domains. However, LLMs’ effi-
+ciency suffers from both heavy computation and memory over-
+heads. Compression techniques like sparsification and quantization
+are commonly used to mitigate the gap between LLM’s computa-
+tion/memory overheads and hardware capacity. However, existing
+GPU and transformer-based accelerators cannot efficiently process
+compressed LLMs, due to the following unresolved challenges: low
+computational efficiency, underutilized memory bandwidth, and
+large compilation overheads.
+This paper proposes FlightLLM, enabling efficient LLMs infer-
+ence with a complete mapping flow on FPGAs. In FlightLLM, we
+highlight an innovative solution that the computation and mem-
+ory overhead of LLMs can be solved by utilizing FPGA-specific
+resources (e.g., DSP48 and heterogeneous memory hierarchy). We
+propose a configurable sparse DSP chain to support different spar-
+sity patterns with high computation efficiency. Second, we propose
+an always-on-chip decode scheme to boost memory bandwidth
+with mixed-precision support. Finally, to make FlightLLM available
+for real-world LLMs, we propose a length adaptive compilation
+∗Both authors contributed equally to this research.
+†Corresponding authors. Email: daiguohao@sjtu.edu.cn, yu-wang@tsinghua.edu.cn
+This work is licensed under a Creative Commons Attribution
+International 4.0 License.
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA
+© 2024 Copyright held by the owner/author(s).
+ACM ISBN 979-8-4007-0418-5/24/03
+https://doi.org/10.1145/3626202.3637562
+method to reduce the compilation overhead. Implemented on the
+Xilinx Alveo U280 FPGA, FlightLLM achieves 6.0× higher energy
+efficiency and 1.8× better cost efficiency against commercial GPUs
+(e.g., NVIDIA V100S) on modern LLMs (e.g., LLaMA2-7B) using
+vLLM and SmoothQuant under the batch size of one. FlightLLM
+beats NVIDIA A100 GPU with 1.2× higher throughput using the
+latest Versal VHK158 FPGA.
+CCS CONCEPTS
+• Hardware→ Hardware accelerators; • Computer systems
+organization→ Reconfigurable computing.
+KEYWORDS
+Large Language Model, FPGA, Complete Mapping Flow
+ACM Reference Format:
+Shulin Zeng, Jun Liu, Guohao Dai, Xinhao Yang, Tianyu Fu, Hongyi Wang,
+Wenheng Ma, Hanbo Sun, Shiyao Li, Zixiao Huang, Yadong Dai, Jintao
+Li, Zehao Wang, Ruoyu Zhang, Kairui Wen, Xuefei Ning, and Yu Wang.
+2024. FlightLLM: Efficient Large Language Model Inference with a Com-
+plete Mapping Flow on FPGAs. In Proceedings of the 2024 ACM/SIGDA
+International Symposium on Field Programmable Gate Arrays (FPGA ’24),
+March 3–5, 2024, Monterey, CA, USA. ACM, New York, NY, USA, 12 pages.
+https://doi.org/10.1145/3626202.3637562
+1 INTRODUCTION
+Recently, we have witnessed the rapid development and significant
+impact of Large Language Models (LLMs) [5, 48]. LLMs demonstrate
+amazing power to understand all the users’ input requests (prefill
+stage) and generate accurate responses token-by-token (decode
+
+
+
+--- PAGE 2 ---
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA Shulin Zeng et al.
+Large
+Language Model
+FPGA
+GPU
+FlightLLM
+Deploy with opt.
+(vLLM, INT8, …)
+Cost
+Price
+(~$12K)
+Power
+(~220W)
+Cost
+Price
+(~$8K)
+Power
+(~45W)
+V100
+(12 nm)
+U280
+(16 nm)
+Performance
+Performance
+~45
+token/s
+~55
+token/s
+1x throughput/price
+1x throughput/power
+1.8x throughput/price
+6.0x throughput/power
+Figure 1: FlightLLM on Alveo U280 FPGA outperforms
+NVIDIA V100S GPU (using vLLM [31] and SmoothQuant [49])
+with better performance and cost efficiency.
+stage). LLMs are being widely used in latency-sensitive scenar-
+ios [36], such as code completion [ 42], real-time chatbots [7, 40],
+customer support [26], online legal advice [12], and beyond. The
+latency is critical for a good user experience, and the batch size
+is usually set as 1 to meet the real-time requirement. However,
+current LLMs suffer from both heavy computation and memory
+overheads because of the explosive growth model size of LLMs.
+Taking GPT-3 [6] as an example, it has 175 billion parameters (i.e.,
+350GB in FP16), requiring about 660TOPS of computation amount
+to complete a single inference.
+Model compression methods [ 13] (e.g., sparsification, quanti-
+zation, etc.) are commonly applied to address the above issues.
+However, the unique computation schemes of these methods are
+not efficiently supported by current hardware platforms, like GPUs,
+for LLMs. From the computation perspective, current GPUs only
+support structured sparsity (e.g., 2:4 sparsity), leading to significant
+algorithm accuracy loss of LLMs [19]. In contrast, the unstructured
+sparsity ensuring algorithm accuracy cannot bring end-to-end ac-
+celeration for LLMs. For example, the 75% unstructured sparsity
+only leads to negligible end-to-end speedup [18]. From the mem-
+ory perspective, quantization and large on-chip memory can re-
+duce data access. Recent algorithm studies [ 14, 28] are pushing
+the limit of bit-width with mixed-precision quantization. How-
+ever, the alignment feature of GPU’s cache and SIMD architecture
+requires homogeneous bit-widths of LLM parameters for weight
+access reduction [49]. Compounding the issue, GPU’s KB-scaled
+share memory of SMs cannot hold all the activations for LLM text
+generation.
+FPGAs are potential solutions to accelerate LLM inference and
+explore the benefits brought by model compression, which has
+been proven in previous deep learning models [21, 22, 39, 43, 55].
+However, efficient LLM inference on FPGAs needs to solve the
+following challenges (Fig. 2):
+• Low computation efficiency. Flexible sparsity patterns
+(e.g., block sparsity [53], N:M sparsity [8], etc.) in LLM leads
+to low computation efficiency.
+• Underutilized memory bandwidth. The decode stage of
+LLM repetitively accesses fine-grained data from off-chip
+memory, leading to underutilized bandwidth (29-43%).
+• Large compilation overheads. The dynamic sparsity pat-
+terns and input lengths of LLMs constitute a large design
+space. For example, generating instructions for 2048 input
+token length results in∼TB storage overhead on FPGAs.
+Always-on-chipdecode&mixed-precisionsupport
+Length adaptivecompilation
+1.Heavy ComputationCompress model with various sparse pattern
+Bandwidth1.9x↑
+On-chipbufferOff-chipmemory
+abcdChallenges for LLMsSolutionsin FlightLLM
+4b4b4b4b8b8b8b8b8b8b8b8b
+ConfigurablesparseDSP chain
+2.Heavy Memory AccessRepetitive activation write to off-chip memory
+3.Dynamic Input LengthEach instruction file for each input length
+Inferencecase
+Largespace!Smallspace!~TB→GB
+HW. infoPerf.
+MACMAC
+MACMACab
+cdMACMAC
+MACMACa
+b
+Efficiency1.6x↑idle
+idle0
+Figure 2: Three challenges of LLM inference on FPGAs, and
+the corresponding solutions in FlightLLM.
+In this paper, we proposeFlightLLM, enabling efficient LLMs in-
+ference with a complete mapping flow on FPGAs (Fig. 1). FlightLLM
+innovatively points out that the computation and memory over-
+head of LLMs can be solved by utilizing FPGA-specific resources
+(e.g., DSP48 and heterogeneous memory hierarchy). To address
+the challenges of low computation efficiency, FlightLLM exploits
+a configurable sparse DSP chain. We introduce a flexible cascaded
+DSP48 architecture to support different sparsity patterns with high
+computation efficiency (i.e., runtime DSP utilization). To tackle the
+underutilized memory bandwidth, FlightLLM proposes an always-
+on-chip decode scheme. Activations reside in the on-chip memory
+during the decode stage with the support of mixed-precision quan-
+tization. To reduce the compilation overhead, FlightLLM proposes
+a length adaptive compilation method. Instructions for consecutive
+input token length are grouped, and the total storage overhead for
+instructions can be reduced.
+The main contributions of this paper are as follows.
+• We propose a configurable sparse DSP chain to support differ-
+ent sparsity patterns. FlightLLM improves the computation
+efficiency by 1.6× with block-wise and N:M sparsity.
+• We propose an always-on-chip decode scheme with mixed-
+precision support. Flig
+
+
+--- PAGE 3 ---
+FlightLLM: Efficient Large Language Model Inference with a Complete Mapping Flow on FPGAs FPGA ’24, March 3–5, 2024, Monterey, CA, USA
+Who
+won
+?
+W1 W2A
+(a)
+WQ WvQ
+Multi-head
+Attention
+V
+Wk
+won
+?
+Alex
+O
+FFN
+Who
+won
+?
+Alex
+won
+?
+Alex
+won
+(b)
+Transformer
+Block
+W1 W2
+WQ Wv
+Q
+Wk
+O
+FFNKcache
+Transformer
+Block
+A
+Multi-head
+Attention
+V
+Vcache
+T
+T
+WO
+WO
+Figure 3: The (a) prefill and (b) decode stage of LLMs. Colored
+squares are weights or cached data. Gray denotes activations.
+2 BACKGROUND AND RELATED WORK
+2.1 Background
+Transformer-based LLMs [41, 54] achieve state-of-the-art (SOTA)
+performance across all kinds of Natural Language Processing (NLP)
+tasks. The transformer model architecture consists of many cas-
+caded transformer blocks and each transformer block generally
+includes two types of networks: the Multi-Head Attention (MHA)
+and the Feed Forward Network (FFN).
+Given𝑁 input tokens embedded in 𝐷 dimensional space𝑋∈
+R𝑁×𝐷, the MHA projects the token embedding asℎ heads’ query
+𝑄, key 𝐾 and value𝑉 matrices in Rℎ×𝑁×𝐷 space and performs
+attention operation for each head as shown in equation 1.
+𝑄 =𝑋𝑊𝑄,𝐾 =𝑋𝑊𝐾,𝑉 =𝑋𝑊𝑉 ;𝑂 = softmax(𝑄𝐾𝑇)𝑉 (1)
+where𝑊𝑄,𝑊𝐾 ,𝑊𝑉 represent the weight matrix in MHA.
+The FFN further transforms each token embedding. Given the
+MHA output matrix 𝑂 ∈ Rℎ×𝑁×𝐷, FFN passes it through two
+fully connected layers with a non-linear activation function𝑔 and
+generates the token embedding for the next transformer block.
+𝑋 =𝑔(𝑂𝑊1)𝑊2 (2)
+where,𝑊1,𝑊2 represent the two weight matrix in FFN.
+As shown in Fig. 3, the workflow of LLMs can be divided into
+two main stages: the prefill stage and the decode stage. In the prefill
+stage, LLM takes a prompt from the user which is a sequence of
+tokens as the input (e.g. the " Who won ? " in Figure.3 (a)). Then,
+LLM will understand the context of the prompt and generates the
+first response token (e.g. the "Alex" in Figure.3 (a)). All the𝑁 input
+tokens are processed simultaneously with high throughput. In the
+decode stage, LLM treats the newly generated token as length𝑁 = 1
+input and generates the next token (e.g. the "won" in Figure.3 (b)).
+Since LLM only processes one new token at a time in the decode
+stage, the matrix-matrix multiplications in equation 1 and 2 become
+matrix-vector multiplications. The decode stage is called iteratively
+to generate the response token by token.
+2.2 Related Work
+Efficient Transformer. To tackle the extreme overhead of LLMs,
+various compression techniques are commonly used. Quantiza-
+tion [15, 20, 33, 49, 52] approaches use low-bit integers to substitute
+the 16-bit floating point parameters and activations for inference.
+Computing Core
+Memory 
+Management 
+Unit (MMU)
+Matrix
+Processing
+Engine (MPE)
+Special
+Function
+Unit (SFU)
+Instruction Scheduler
+HBM DDR
+Memory Controller
+Task
+SchedulerCPU
+Figure 4: The overall architecture of FlightLLM, including
+task scheduler, memory controller and computing cores.
+Sparse attention [4, 8, 9, 45, 53] and weight pruning [ 19, 30] ap-
+proaches skip part of the attention matrix or weight matrix comput-
+ing according to the defined sparse pattern. Various sparse patterns
+are proposed for different tasks and transformers, including lo-
+cal diagonal pattern [ 4], block sparse [ 9, 29, 30, 53], N:M sparse
+pattern [8, 19], row-column skipping pattern [ 45], unstructured
+pattern [19] and so on.
+LLM-related Accelerators. Previous work [17, 23–25, 27, 32, 34,
+37, 45, 47] propose customized architecture design for transformer
+models. Some work [17, 24, 32, 34, 44, 45] lay more emphasis on
+accelerating sparse attention. They design specialized architectures
+to fully utilize the pre-defined static attention pattern [17, 32] or
+dynamically generated attention pattern [34, 37, 44, 45]. Recently,
+FACT [37] points out the importance of compressing linear layers
+with mixed-precision quantization to help reduce latency. However,
+these methods cannot accelerate the decode stage of LLMs since
+they mainly focus on the prefill stage for discriminative models,
+like medium-sized BERT [16] model. DFX [25] emphasizes the ac-
+celeration of the decode stage of LLMs. However, it lacks hardware
+support for model compression of LLMs, making it hard to further
+expand model size or maximum token size.
+3 COMPUTING ARCHITECTURE
+3.1 Overall Architecture
+We design a high-performance FPGA-based accelerator for gen-
+erative LLMs by making full use of FPGA resources. Combined
+with compression techniques like sparsification and quantization,
+FlightLLM can effectively accelerate the generative LLMs and re-
+duce the inference overhead. As shown in Fig. 4, the overall hard-
+ware architecture of FlightLLM mainly includes a task scheduler,
+memory controller, and multiple computing cores (short as cores).
+The accelerator uses model parallelism on multiple cores to com-
+plete the LLM inference task. The task scheduler assigns tasks to
+different cores and controls data synchronization.
+The components of each core include the unified Matrix Pro-
+cessing Engine (
+
+
+--- PAGE 11 ---
+FlightLLM: Efficient Large Language Model Inference with a Complete Mapping Flow on FPGAs FPGA ’24, March 3–5, 2024, Monterey, CA, USA
+REFERENCES
+[1] 2017. Deep Learning with INT8 Optimization on Xilinx Devices. [Online].
+https://docs.xilinx.com/v/u/en-US/wp486-deep-learning-int8.
+[2] 2022. nvprof. [Online]. https://docs.nvidia.com/cuda/profiler-users-guide/index.
+html.
+[3] 2022. Xilinx Board Utility Tool. [Online]. https://xilinx.github.io/XRT/2021.1/
+html/xbutil2.html.
+[4] Iz Beltagy, Matthew E Peters, and Arman Cohan. 2020. Longformer: The long-
+document transformer. arXiv preprint arXiv:2004.05150 (2020).
+[5] Rishi Bommasani, Drew A Hudson, Ehsan Adeli, Russ Altman, Simran Arora,
+Sydney von Arx, Michael S Bernstein, Jeannette Bohg, Antoine Bosselut, Emma
+Brunskill, et al. 2021. On the opportunities and risks of foundation models. arXiv
+preprint arXiv:2108.07258 (2021).
+[6] Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D Kaplan,
+Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda
+Askell, et al. 2020. Language models are few-shot learners. Advances in neural
+information processing systems 33 (2020), 1877–1901.
+[7] Siyuan Chen, Mengyue Wu, Kenny Q Zhu, Kunyao Lan, Zhiling Zhang, and
+Lyuchun Cui. 2023. LLM-empowered Chatbots for Psychiatrist and Patient
+Simulation: Application and Evaluation. arXiv preprint arXiv:2305.13614 (2023).
+[8] Zhaodong Chen, Zheng Qu, Yuying Quan, Liu Liu, Yufei Ding, and Yuan Xie. 2023.
+Dynamic n: M fine-grained structured sparse attention mechanism. InProceedings
+of the 28th ACM SIGPLAN Annual Symposium on Principles and Practice of Parallel
+Programming. 369–379.
+[9] Rewon Child, Scott Gray, Alec Radford, and Ilya Sutskever. 2019. Generating
+long sequences with sparse transformers. arXiv preprint arXiv:1904.10509 (2019).
+[10] Jack Choquette, Wishwesh Gandhi, Olivier Giroux, Nick Stam, and Ronny
+Krashinsky. 2021. Nvidia a100 tensor core gpu: Performance and innovation.
+IEEE Micro 41, 2 (2021), 29–35.
+[11] Together Computer. 2023.RedPajama: An Open Source Recipe to Reproduce LLaMA
+training dataset. https://github.com/togethercomputer/RedPajama-Data
+[12] Jiaxi Cui, Zongjian Li, Yang Yan, Bohua Chen, and Li Yuan. 2023. ChatLaw:
+Open-Source Legal Large Language Model with Integrated External Knowledge
+Bases. arXiv:2306.16092 (2023).
+[13] Lei Deng, Guoqi Li, Song Han, Luping Shi, and Yuan Xie. 2020. Model compression
+and hardware acceleration for neural networks: A comprehensive survey. Proc.
+IEEE 108, 4 (2020), 485–532.
+[14] Tim Dettmers, Mike Lewis, Younes Belkada, and Luke Zettlemoyer. 2022. Llm.
+int8 (): 8-bit matrix multiplication for transformers at scale. arXiv preprint
+arXiv:2208.07339 (2022).
+[15] Tim Dettmers, Mike Lewis, Younes Belkada, and Luke Zettlemoyer. 2022. Llm.
+int8 (): 8-bit matrix multiplication for transformers at scale. arXiv preprint
+arXiv:2208.07339 (2022).
+[16] Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova. 2019. BERT:
+Pre-training of Deep Bidirectional Transformers for Language Understanding.
+arXiv:1810.04805 [cs.CL]
+[17] Hongxiang Fan, Thomas Chau, Stylianos I. Venieris, Royson Lee, Alexandros
+Kouris, Wayne Luk, Nicholas D. Lane, and Mohamed S. Abdelfattah. 2022. Adapt-
+able Butterfly Accelerator for Attention-based NNs via Hardware and Algorithm
+Co-design. In 2022 55th IEEE/ACM International Symposium on Microarchitecture
+(MICRO). 599–615. https://doi.org/10.1109/MICRO56248.2022.00050
+[18] Aosong Feng, Irene Li, Yuang Jiang, and Rex Ying. 2023. Diffuser: efficient
+transformers with multi-hop attention diffusion for long sequences. InProceedings
+of the AAAI Conference on Artificial Intelligence , Vol. 37. 12772–12780.
+[19] Elias Frantar and Dan Alistarh. 2023. SparseGPT: Massive Language Models Can
+Be Accurately Pruned in One-Shot. (2023).
+[20] Elias Frantar, Saleh Ashkboos, Torsten Hoefler, and Dan Alistarh. 2022. Gptq:
+Accurate post-training quantization for generative pre-trained transformers.
+arXiv preprint arXiv:2210.17323 (2022).
+[21] Yu Gong, Zhihan Xu, Zhezhi He, Weifeng Zhang, Xiaobing Tu, Xiaoyao Liang, and
+Li Jiang. 2022. N3H-core: Neuron-designed neural network accelerator via FPGA-
+based heterogeneous computing cores. In Proceedings of the 2022 ACM/SIGDA
+International Symposium on Field-Programmable Gate Arrays . 112–122.
+[22] Kaiyuan Guo, Lingzhi Sui, Jiantao Qiu, Jincheng Yu, Junbin Wang, Song Yao, Song
+Han, Yu Wang, and Huazhong Yang. 2017. Angel-eye: A complete design flow
+for mapping CNN onto embedded FPGA. IEEE transactions on computer-aided
+design of integrated circuits and systems 37, 1 (2017), 35–47.
+[23] Tae Jun Ham, Sung Jun Jung, Seonghak Kim, Young H. Oh, Yeonhong Park,
+Yoonho Song, Jung-Hun Park, Sanghee Lee, Kyoung Park, Jae W. Lee, and Deog-
+Kyoon Jeong. 2020. A 3: Accelerating Attention Mechanisms in Neural Networks
+with Approximation. arXiv:2002.10941 [cs.DC]
+[24] Tae Jun Ham, Yejin Lee, Seong Hoon Seo, Soosung Kim, Hyunji Choi, Sung Jun
+Jung, and Jae W. Lee. 2021. ELSA: 
+
+
+--- PAGE 12 ---
+FPGA ’24, March 3–5, 2024, Monterey, CA, USA Shulin Zeng et al.
+[46] Zeke Wang, Hongjing Huang, Jie Zhang, and Gustavo Alonso. 2020. Shuhai:
+Benchmarking high bandwidth memory on fpgas. In 2020 IEEE 28th Annual
+International Symposium on Field-Programmable Custom Computing Machines
+(FCCM). IEEE, 111–119.
+[47] Zhican Wang, Gang Wang, Honglan Jiang, Ningyi Xu, and Guanghui He. 2023.
+COSA: Co-Operative Systolic Arrays for Multi-head Attention Mechanism in
+Neural Network using Hybrid Data Reuse and Fusion Methodologies. In 2023
+60th ACM/IEEE Design Automation Conference (DAC). IEEE, 1–6.
+[48] Jason Wei, Yi Tay, Rishi Bommasani, Colin Raffel, Barret Zoph, Sebastian
+Borgeaud, Dani Yogatama, Maarten Bosma, Denny Zhou, Donald Metzler, et al.
+2022. Emergent abilities of large language models.arXiv preprint arXiv:2206.07682
+(2022).
+[49] Guangxuan Xiao, Ji Lin, Mickael Seznec, Hao Wu, Julien Demouth, and Song
+Han. 2023. Smoothquant: Accurate and efficient post-training quantization for
+large language models. In International Conference on Machine Learning . PMLR,
+38087–38099.
+[50] Xilinx. 2021. Alveo U280 Data Center Accelerator Card Data Sheet. https:
+//docs.xilinx.com/v/u/en-US/ds963-u280.
+[51] Xilinx. 2023. Versal™ Architecture and Product Data Sheet. https://docs.xilinx.
+com/v/u/en-US/ds950-versal-overview.
+[52] Zhewei Yao, Reza Yazdani Aminabadi, Minjia Zhang, Xiaoxia Wu, Conglong Li,
+and Yuxiong He. 2022. Zeroquant: Efficient and affordable post-training quanti-
+zation for large-scale transformers. Advances in Neural Information Processing
+Systems 35 (2022), 27168–27183.
+[53] Manzil Zaheer, Guru Guruganesh, Kumar Avinava Dubey, Joshua Ainslie, Chris
+Alberti, Santiago Ontanon, Philip Pham, Anirudh Ravula, Qifan Wang, Li Yang,
+et al. 2020. Big bird: Transformers for longer sequences. Advances in neural
+information processing systems 33 (2020), 17283–17297.
+[54] Susan Zhang, Stephen Roller, Naman Goyal, Mikel Artetxe, Moya Chen, Shuohui
+Chen, Christopher Dewan, Mona Diab, Xian Li, Xi Victoria Lin, et al . [n. d.].
+Opt: Open pre-trained transformer language models, 2022. URL https://arxiv.
+org/abs/2205.01068 ([n. d.]).
+[55] Yichi Zhang, Junhao Pan, Xinheng Liu, Hongzheng Chen, Deming Chen, and
+Zhiru Zhang. 2021. FracBNN: Accurate and FPGA-efficient binary neural net-
+works with fractional activations. In The 2021 ACM/SIGDA International Sympo-
+sium on Field-Programmable Gate Arrays . 171–182.
+[56] Han Zhao, Quan Chen, Yuxian Qiu, Ming Wu, Yao Shen, Jingwen Leng, Chao
+Li, and Minyi Guo. 2018. Bandwidth and locality aware task-stealing for many-
+core architectures with bandwidth-asymmetric memory. ACM Transactions on
+Architecture and Code Optimization (TACO) 15, 4 (2018), 1–26.
+[57] Aojun Zhou, Yukun Ma, Junnan Zhu, Jianbo Liu, Zhijie Zhang, Kun Yuan, Wenxiu
+Sun, and Hongsheng Li. 2021. Learning n: m fine-grained structured sparse neural
+networks from scratch. arXiv preprint arXiv:2102.04010 (2021).
