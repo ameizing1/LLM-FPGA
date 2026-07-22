@@ -15,7 +15,7 @@ Project folder: `D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\L
 | 推进FPGA部署LLM-环境配置与Axcore复现 | active | `019f311c-db96-7ad2-97db-bda35bf78cad` | `D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\LLM-FPGA` | 2026-07-05 | project root | n/a |
 | 推进FPGA部署LLM-AM-LUT作Axcore替换 | active | `019f311c-df7d-7ab0-8e2c-4195e9dfff67` | `D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\LLM-FPGA` | 2026-07-05 | project root | n/a |
 | 汇总进展并回复导师 | active | `019f6554-9f5b-7612-a0b6-2d51f268d1e9` | `D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\LLM-FPGA` | 2026-07-15 | 44.7 MiB | present (24 files) |
-| GitHub 入门与项目版本管理判断 | active | `unknown-current-task` | `D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\LLM-FPGA` | 2026-07-23 | 67.0 MiB | present (37 files, 5 dirs) |
+| GitHub 入门与项目版本管理判断 | active | `unknown-current-task` | `D:\LiuZhiWei\Documents\STUDTORWORK\研0\SJTU relative project\LLM-FPGA` | 2026-07-23 | 67.0 MiB | present (37 files, 5 dirs); GitHub private repo: `ameizing1/LLM-FPGA` |
 
 ## Source Threads
 
