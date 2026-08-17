@@ -9,6 +9,7 @@ Research workspace for exploring FPGA-oriented LLM arithmetic, AM-LUT multiplier
 - `am_lut_tcasi24/`: TCASI24 and AM-LUT Python model code.
 - `multiplier_models/`: multiplier model helpers.
 - `FPGA_multiplier/`: FPGA multiplier design artifacts.
+- `docs/external-sources/`: provenance notes for imported collaboration code.
 - `docs/`: project migration notes and planning docs.
 - `study/`: reading notes, experiment logs, and project roadmaps.
 - `outputs/reports/`: lightweight generated reports intended for version control.
