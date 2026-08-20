@@ -43,6 +43,7 @@ def parse_args():
     p.add_argument('--max-wce',type=int,default=0)
     p.add_argument('--max-workload-mred',type=float,default=-1)
     p.add_argument('--max-workload-er',type=float,default=-1)
+    p.add_argument('--max-workload-bias-abs',type=float,default=-1)
     p.add_argument('--score-mred-weight',type=float,default=None)
     p.add_argument('--score-er-weight',type=float,default=None)
     p.add_argument('--score-ned-weight',type=float,default=None)
@@ -81,6 +82,7 @@ def valid(m,args):
     if args.max_wce>0 and m.WCE>args.max_wce: return False
     if args.max_workload_mred>=0 and m.workload_MRED>args.max_workload_mred: return False
     if args.max_workload_er>=0 and m.workload_ER>args.max_workload_er: return False
+    if args.max_workload_bias_abs>=0 and abs(m.workload_bias)>args.max_workload_bias_abs: return False
     return True
 
 

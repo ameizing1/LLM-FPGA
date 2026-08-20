@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 .venv/
+.venv-probe/
 venv/
 env/
 .ipynb_checkpoints/
@@ -16,9 +17,12 @@ Desktop.ini
 
 # Logs and transient generated files
 *.log
+*.stdout.log
+*.stderr.log
 *.tmp
 *.temp
 *.bak
+~$*
 
 # Archives and large reference artifacts
 *.zip
@@ -27,6 +31,11 @@ Desktop.ini
 *.tar
 *.tar.gz
 *.pdf
+*.docx
+*.npy
+*.npz
+*.pt
+*.pth
 
 # Rendered/generated outputs: keep lightweight reports only
 outputs/*
@@ -35,6 +44,8 @@ outputs/*
 !outputs/reports/**/*.txt
 !outputs/reports/**/*.csv
 !outputs/reports/**/*.json
+outputs/reports/docx_pdf_export_*/
+outputs/reports/real_w8a8_env_smoke/
 
 # Generated image artifacts
 *.png
@@ -61,3 +72,11 @@ outputs/*
 *.sim/
 *.hw/
 *.ip_user_files/
+
+# Local scratch and external reproduction sandboxes
+tmp/
+work/
+
+# Bulk generated FPGA multiplier sweeps. Promote selected files explicitly with
+# `git add -f` only after they are known to be durable project assets.
+FPGA_multiplier/*_202*/

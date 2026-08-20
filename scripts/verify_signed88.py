@@ -77,11 +77,15 @@ def resolve_tool(explicit,name):
 
 def verify_rtl(design,inits,rtl_dir,args):
     rtl_dir=Path(rtl_dir).resolve(); cells=Path(args.cells_sim).resolve()
-    if not cells.exists(): raise FileNotFoundError(cells)
+    if not cells.exists(): cells=None
     iverilog=resolve_tool(args.iverilog,'iverilog');vvp=resolve_tool(args.vvp,'vvp')
     exact,approx,_=brute_force_relation(design,inits)
     with tempfile.TemporaryDirectory(prefix='verify_signed88_') as td:
         td=Path(td); exp=td/'expected.hex';tb=td/'tb.v';sim=td/'sim.out'
+        if cells is None:
+            from generate_fpga_signed_wrapper_luts import PRIMITIVES_VERILOG
+            cells=td/'xilinx_primitives_sim.v'
+            cells.write_text(PRIMITIVES_VERILOG,encoding='utf-8')
         exp.write_text(''.join(f'{int(x)&0xffff:04x}\n' for x in approx),encoding='ascii')
         tb.write_text(f'''`timescale 1ns/1ps
 module tb;
